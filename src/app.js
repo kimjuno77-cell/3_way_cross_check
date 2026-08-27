@@ -47,7 +47,7 @@ function showDashboardView() {
     loadDashboard();
 }
 
-function showFormView(formId = null) {
+async function showFormView(formId = null) {
     authView.classList.add('hidden');
     appLayout.classList.remove('hidden');
     dashboardView.classList.add('hidden');
