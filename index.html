@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>표준 출하 전 3-Way Cross Check 확인서</title>
+    <title>표준 출하 전 3-Way Cross Check 확인서 시스템</title>
     <!-- Google Fonts: Inter & Noto Sans KR -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <!-- FontAwesome for Icons -->
@@ -11,252 +11,326 @@
     
     <!-- Vite CSS and JS modules -->
     <link rel="stylesheet" href="/src/style.css">
-    <script type="module" src="/src/main.js"></script>
+    <!-- 모듈 스크립트 로드: 앱 엔트리 포인트 -->
+    <script type="module" src="/src/app.js"></script>
 </head>
-<body class="text-slate-900 antialiased p-4 md:p-8">
+<body class="text-slate-900 antialiased h-screen overflow-hidden flex flex-col bg-slate-50">
 
-    <div class="max-w-[900px] mx-auto bg-white p-8 md:p-10 shadow-lg border border-slate-200 print-container relative">
-        
-        <!-- Controls -->
-        <div class="absolute top-8 right-8 no-print flex gap-2">
-            <button id="btn-save" class="px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2">
-                <i class="fas fa-save"></i> DB에 저장
-            </button>
-            <button onclick="window.print()" class="px-5 py-2 bg-slate-800 text-white rounded-md text-sm font-semibold hover:bg-slate-700 transition-colors shadow-sm flex items-center gap-2">
-                <i class="fas fa-print"></i> PDF 저장 / 인쇄
-            </button>
+    <!-- 1. 로그인/회원가입 뷰 -->
+    <div id="auth-view" class="h-full flex flex-col items-center justify-center bg-slate-100 absolute inset-0 z-50">
+        <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md border border-slate-200">
+            <h2 class="text-2xl font-bold text-center mb-6 text-slate-800">EMKO 출하 시스템</h2>
+            <form id="auth-form" class="flex flex-col gap-4">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">이메일</label>
+                    <input type="email" id="auth-email" required class="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">비밀번호</label>
+                    <input type="password" id="auth-password" required minlength="6" class="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                </div>
+                <div class="flex gap-2 mt-4">
+                    <button type="submit" id="btn-login" class="flex-1 bg-slate-800 text-white font-bold py-2 px-4 rounded hover:bg-slate-700 transition">로그인</button>
+                    <button type="button" id="btn-signup" class="flex-1 bg-white border border-slate-300 text-slate-700 font-bold py-2 px-4 rounded hover:bg-slate-50 transition">회원가입</button>
+                </div>
+                <p id="auth-msg" class="text-sm text-center mt-2 text-red-500"></p>
+            </form>
         </div>
-
-        <div class="text-center mb-8 border-b-2 border-slate-800 pb-6 mt-4 md:mt-0">
-            <p class="text-sm font-bold text-slate-500 mb-2 uppercase tracking-widest">[EMKO STANDARD FORM]</p>
-            <h1 class="text-3xl font-black text-slate-900 mb-2 tracking-tight">출하 전 3-Way Cross Check 확인서</h1>
-            <p class="text-sm font-medium text-slate-600 uppercase tracking-widest">Pre-Shipment 3-Way Validation & Approval Sheet</p>
-        </div>
-
-        <table class="w-full mb-6 text-sm border-collapse border-2 border-slate-800">
-            <tbody>
-                <tr>
-                    <th class="border border-slate-800 bg-slate-100 p-3 w-[20%] text-left font-bold">프로젝트명</th>
-                    <td class="border border-slate-800 p-3 w-[30%]">
-                        <input type="text" id="project_name" class="e-input font-semibold" placeholder="프로젝트명 입력">
-                    </td>
-                    <th class="border border-slate-800 bg-slate-100 p-3 w-[20%] text-left font-bold">검사일 / 출하일</th>
-                    <td class="border border-slate-800 p-3 w-[30%] text-slate-800">
-                        <input type="date" id="inspection_date" class="e-input w-auto text-sm font-semibold">
-                    </td>
-                </tr>
-                <tr>
-                    <th class="border border-slate-800 bg-slate-100 p-3 text-left font-bold">Package No.</th>
-                    <td class="border border-slate-800 p-3">
-                        <input type="text" id="package_no" class="e-input" placeholder="Package No. 입력">
-                    </td>
-                    <th class="border border-slate-800 bg-slate-100 p-3 text-left font-bold">품목명 (Item)</th>
-                    <td class="border border-slate-800 p-3">
-                        <input type="text" id="item_name" class="e-input" placeholder="품목명 입력">
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-
-        <div class="mb-2 flex items-center justify-between">
-            <h4 class="font-bold text-slate-800 text-lg flex items-center gap-2">
-                <i class="fas fa-check-double text-slate-600"></i> ■ 담당자 교차 검증 (Cross Validation)
-            </h4>
-            <p class="text-xs text-slate-500 no-print">* 체크리스트 항목을 클릭하여 수정하거나, 우측 버튼을 통해 삭제할 수 있습니다.</p>
-        </div>
-
-        <table class="w-full mb-6 text-[13px] border-collapse border-2 border-slate-800">
-            <thead>
-                <tr class="bg-slate-100 text-slate-900 border-b-2 border-slate-800">
-                    <th class="border border-slate-800 p-3 w-[15%] font-bold text-center">단계 / 담당</th>
-                    <th class="border border-slate-800 p-3 w-[45%] font-bold text-center">상세 체크 항목 (Check List)</th>
-                    <th class="border border-slate-800 p-3 w-[25%] font-bold text-center">증빙 자료 (Evidence)</th>
-                    <th class="border border-slate-800 p-3 w-[15%] font-bold text-center">확인 결과</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Step 1 -->
-                <tr>
-                    <td class="border border-slate-800 p-3 font-bold bg-blue-50/30 text-center leading-relaxed">
-                        <span class="text-blue-700 block mb-1 text-sm">1단계</span>
-                        설계 담당자<br>
-                        <span class="text-[11px] font-normal text-slate-500 block mt-1">(BOM 기준)</span>
-                    </td>
-                    <td class="border border-slate-800 p-3 align-top">
-                        <ul id="step1-list" class="space-y-2 text-slate-800">
-                            <li class="flex items-start group relative">
-                                <input type="checkbox" class="e-checkbox mr-2">
-                                <input type="text" value="최신 리비전 도면 및 최신 BOM 적용 확인" class="list-input flex-1">
-                                <button type="button" class="btn-remove no-print opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 ml-2 py-1 px-2 rounded hover:bg-red-50 transition-all" title="항목 삭제"><i class="fas fa-times"></i></button>
-                            </li>
-                            <li class="flex items-start group relative">
-                                <input type="checkbox" class="e-checkbox mr-2">
-                                <input type="text" value="도면 상 요구 수량(Quantity) 산출 정확성" class="list-input flex-1">
-                                <button type="button" class="btn-remove no-print opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 ml-2 py-1 px-2 rounded hover:bg-red-50 transition-all" title="항목 삭제"><i class="fas fa-times"></i></button>
-                            </li>
-                            <li class="flex items-start group relative">
-                                <input type="checkbox" class="e-checkbox mr-2">
-                                <input type="text" value="Anchor, Support, Loose Part 누락 방지 점검" class="list-input flex-1 font-semibold text-blue-700">
-                                <button type="button" class="btn-remove no-print opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 ml-2 py-1 px-2 rounded hover:bg-red-50 transition-all" title="항목 삭제"><i class="fas fa-times"></i></button>
-                            </li>
-                        </ul>
-                        <button type="button" data-list="step1-list" class="btn-add no-print mt-3 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded flex items-center gap-1 border border-blue-200">
-                            <i class="fas fa-plus"></i> 상세 항목 추가
-                        </button>
-                    </td>
-                    <td class="border border-slate-800 p-3 text-slate-700 align-top">
-                        <div class="space-y-4">
-                            <div class="flex flex-col gap-1">
-                                <span class="font-semibold text-xs text-slate-500">도면 번호 (DWG No.)</span>
-                                <input type="text" id="step1_doc_no" class="e-input" placeholder="번호 입력">
-                            </div>
-                            <div class="flex flex-col gap-1">
-                                <span class="font-semibold text-xs text-slate-500">BOM Rev.</span>
-                                <input type="text" id="step1_doc_rev" class="e-input" placeholder="Rev. 정보 입력">
-                            </div>
-                        </div>
-                    </td>
-                    <td class="border border-slate-800 p-2 text-center align-middle">
-                        <div class="flex flex-col gap-3 items-center">
-                            <label class="inline-flex items-center font-bold text-green-700 cursor-pointer">
-                                <input type="radio" name="res1" value="PASS" class="e-checkbox !rounded-full mr-2"> 적합
-                            </label>
-                            <label class="inline-flex items-center font-bold text-red-600 cursor-pointer">
-                                <input type="radio" name="res1" value="FAIL" class="e-checkbox !rounded-full mr-2"> 부적합
-                            </label>
-                        </div>
-                    </td>
-                </tr>
-                
-                <!-- Step 2 -->
-                <tr>
-                    <td class="border border-slate-800 p-3 font-bold bg-amber-50/30 text-center leading-relaxed">
-                        <span class="text-amber-700 block mb-1 text-sm">2단계</span>
-                        구매 담당자<br>
-                        <span class="text-[11px] font-normal text-slate-500 block mt-1">(발주/PO 기준)</span>
-                    </td>
-                    <td class="border border-slate-800 p-3 align-top">
-                        <ul id="step2-list" class="space-y-2 text-slate-800">
-                            <li class="flex items-start group relative">
-                                <input type="checkbox" class="e-checkbox mr-2">
-                                <input type="text" value="1단계 BOM 수량과 실제 발주(PO) 수량 일치" class="list-input flex-1">
-                                <button type="button" class="btn-remove no-print opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 ml-2 py-1 px-2 rounded hover:bg-red-50 transition-all" title="항목 삭제"><i class="fas fa-times"></i></button>
-                            </li>
-                            <li class="flex items-start group relative">
-                                <input type="checkbox" class="e-checkbox mr-2">
-                                <input type="text" value="발주 자재 사양(재질 등) 설계 요구조건 부합" class="list-input flex-1">
-                                <button type="button" class="btn-remove no-print opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 ml-2 py-1 px-2 rounded hover:bg-red-50 transition-all" title="항목 삭제"><i class="fas fa-times"></i></button>
-                            </li>
-                            <li class="flex items-start group relative">
-                                <input type="checkbox" class="e-checkbox mr-2">
-                                <input type="text" value="(부분납) 누적 입고 수량 및 잔여 수량 파악" class="list-input flex-1">
-                                <button type="button" class="btn-remove no-print opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 ml-2 py-1 px-2 rounded hover:bg-red-50 transition-all" title="항목 삭제"><i class="fas fa-times"></i></button>
-                            </li>
-                        </ul>
-                        <button type="button" data-list="step2-list" class="btn-add no-print mt-3 text-xs font-semibold text-amber-600 hover:text-amber-800 bg-amber-50 px-2 py-1 rounded flex items-center gap-1 border border-amber-200">
-                            <i class="fas fa-plus"></i> 상세 항목 추가
-                        </button>
-                    </td>
-                    <td class="border border-slate-800 p-3 text-slate-700 align-top">
-                        <div class="space-y-4">
-                            <div class="flex flex-col gap-1">
-                                <span class="font-semibold text-xs text-slate-500">발주 번호 (PO No.)</span>
-                                <input type="text" id="step2_doc_no" class="e-input" placeholder="번호 입력">
-                            </div>
-                            <div class="flex flex-col gap-1">
-                                <label class="flex items-center gap-2 cursor-pointer mt-2">
-                                    <input type="checkbox" id="step2_evidence" class="e-checkbox">
-                                    <span class="font-semibold text-xs text-slate-700">입고증명서 확보</span>
-                                </label>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="border border-slate-800 p-2 text-center align-middle">
-                        <div class="flex flex-col gap-3 items-center">
-                            <label class="inline-flex items-center font-bold text-green-700 cursor-pointer">
-                                <input type="radio" name="res2" value="PASS" class="e-checkbox !rounded-full mr-2"> 적합
-                            </label>
-                            <label class="inline-flex items-center font-bold text-red-600 cursor-pointer">
-                                <input type="radio" name="res2" value="FAIL" class="e-checkbox !rounded-full mr-2"> 부적합
-                            </label>
-                        </div>
-                    </td>
-                </tr>
-
-                <!-- Step 3 -->
-                <tr>
-                    <td class="border border-slate-800 p-3 font-bold bg-purple-50/30 text-center leading-relaxed">
-                        <span class="text-purple-700 block mb-1 text-sm">3단계</span>
-                        물류 담당자<br>
-                        <span class="text-[11px] font-normal text-slate-500 block mt-1">(Packing List 기준)</span>
-                    </td>
-                    <td class="border border-slate-800 p-3 align-top">
-                        <ul id="step3-list" class="space-y-2 text-slate-800">
-                            <li class="flex items-start group relative">
-                                <input type="checkbox" class="e-checkbox mr-2">
-                                <input type="text" value="발주/입고 수량과 Packing List 수량 최종 일치" class="list-input flex-1">
-                                <button type="button" class="btn-remove no-print opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 ml-2 py-1 px-2 rounded hover:bg-red-50 transition-all" title="항목 삭제"><i class="fas fa-times"></i></button>
-                            </li>
-                            <li class="flex items-start group relative">
-                                <input type="checkbox" class="e-checkbox mr-2">
-                                <input type="text" value="출하 전 실물 육안 대조 검사 (포장 전 상태)" class="list-input flex-1 font-bold underline">
-                                <button type="button" class="btn-remove no-print opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 ml-2 py-1 px-2 rounded hover:bg-red-50 transition-all" title="항목 삭제"><i class="fas fa-times"></i></button>
-                            </li>
-                            <li class="flex items-start group relative">
-                                <input type="checkbox" class="e-checkbox mr-2">
-                                <input type="text" value="포장(Packing) 상태 및 육안상 파손 여부 확인" class="list-input flex-1">
-                                <button type="button" class="btn-remove no-print opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 ml-2 py-1 px-2 rounded hover:bg-red-50 transition-all" title="항목 삭제"><i class="fas fa-times"></i></button>
-                            </li>
-                        </ul>
-                        <button type="button" data-list="step3-list" class="btn-add no-print mt-3 text-xs font-semibold text-purple-600 hover:text-purple-800 bg-purple-50 px-2 py-1 rounded flex items-center gap-1 border border-purple-200">
-                            <i class="fas fa-plus"></i> 상세 항목 추가
-                        </button>
-                    </td>
-                    <td class="border border-slate-800 p-3 text-slate-700 align-top">
-                        <div class="space-y-4">
-                            <div class="flex flex-col gap-1">
-                                <span class="font-semibold text-xs text-slate-500">P/L No.</span>
-                                <input type="text" id="step3_doc_no" class="e-input" placeholder="번호 입력">
-                            </div>
-                            <div class="flex flex-col gap-1">
-                                <label class="flex items-center gap-2 cursor-pointer mt-2">
-                                    <input type="checkbox" id="step3_evidence" class="e-checkbox">
-                                    <span class="font-semibold text-xs text-slate-700">출하 실물 사진 확보</span>
-                                </label>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="border border-slate-800 p-2 text-center align-middle">
-                        <div class="flex flex-col gap-3 items-center">
-                            <label class="inline-flex items-center font-bold text-green-700 cursor-pointer">
-                                <input type="radio" name="res3" value="PASS" class="e-checkbox !rounded-full mr-2"> 적합
-                            </label>
-                            <label class="inline-flex items-center font-bold text-red-600 cursor-pointer">
-                                <input type="radio" name="res3" value="FAIL" class="e-checkbox !rounded-full mr-2"> 부적합
-                            </label>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-
-        <div class="bg-slate-50 border border-slate-300 p-4 mb-6 text-[13px]">
-            <h5 class="font-bold text-slate-800 mb-3">※ 최종 첨부 증빙 리스트 (Check 첨부 문서)</h5>
-            <div id="evidence_list" class="flex flex-wrap gap-6 text-slate-700 font-medium">
-                <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" value="최신 설계 도면" class="ev-chk e-checkbox !mt-0"> 최신 설계 도면</label>
-                <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" value="자재 BOM List" class="ev-chk e-checkbox !mt-0"> 자재 BOM List</label>
-                <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" value="발주서(PO)" class="ev-chk e-checkbox !mt-0"> 발주서(PO)</label>
-                <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" value="입고증" class="ev-chk e-checkbox !mt-0"> 입고증</label>
-                <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" value="Packing List" class="ev-chk e-checkbox !mt-0"> Packing List</label>
-                <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" value="출하 전 실물 사진" class="ev-chk e-checkbox !mt-0"> 출하 전 실물 사진</label>
-                <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900 w-full md:w-auto mt-2 md:mt-0">
-                    <input type="checkbox" id="ev_other_chk" class="e-checkbox !mt-0"> 기타:
-                    <input type="text" id="ev_other_text" class="e-input w-48 ml-2" placeholder="기타 증빙 입력">
-                </label>
-            </div>
-        </div>
-        
     </div>
+
+    <!-- 2. 메인 애플리케이션 레이아웃 (인증 후) -->
+    <div id="app-layout" class="hidden h-full flex-col">
+        <!-- 네비게이션 바 -->
+        <nav class="bg-white shadow px-6 py-4 flex justify-between items-center z-10 shrink-0">
+            <div class="font-bold text-xl text-slate-800 flex items-center gap-2 cursor-pointer" id="nav-logo">
+                <i class="fas fa-boxes text-blue-600"></i> EMKO 3-Way Cross Check
+            </div>
+            <div class="flex gap-4 items-center">
+                <span id="user-email-display" class="text-sm font-medium text-slate-600"></span>
+                <button id="btn-logout" class="text-sm font-semibold text-slate-500 hover:text-red-600 transition"><i class="fas fa-sign-out-alt"></i> 로그아웃</button>
+            </div>
+        </nav>
+
+        <div class="flex-1 overflow-auto bg-slate-50 relative p-4 md:p-8">
+            
+            <!-- 2-A. 대시보드 뷰 -->
+            <div id="dashboard-view" class="max-w-5xl mx-auto hidden">
+                <div class="flex justify-between items-end mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800">프로젝트 대시보드</h2>
+                        <p class="text-sm text-slate-500 mt-1">저장된 출하 검증 문서를 확인하거나 새로 작성하세요.</p>
+                    </div>
+                    <button id="btn-new-form" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-semibold shadow-sm flex items-center gap-2">
+                        <i class="fas fa-plus"></i> 새 문서 작성
+                    </button>
+                </div>
+
+                <!-- 검색 바 -->
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200 mb-6 flex gap-4">
+                    <div class="flex-1 relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="search-input" placeholder="프로젝트명 또는 Package No. 검색..." class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <!-- 프로젝트 목록 그리드 -->
+                <div id="project-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- JS 로 동적 렌더링 됨 -->
+                </div>
+            </div>
+
+            <!-- 2-B. 폼 뷰 (상세 문서 조회 및 편집) -->
+            <div id="form-view" class="hidden">
+                <div class="max-w-[900px] mx-auto mb-4 flex gap-2">
+                    <button id="btn-back-dashboard" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-md text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm">
+                        <i class="fas fa-arrow-left"></i> 목록으로 돌아가기
+                    </button>
+                </div>
+
+                <!-- 폼 컨테이너 -->
+                <div class="max-w-[900px] mx-auto bg-white p-8 md:p-10 shadow-lg border border-slate-200 print-container relative">
+                    
+                    <input type="hidden" id="current_form_id" value="">
+                    <input type="hidden" id="current_project_id" value="">
+
+                    <!-- Controls -->
+                    <div class="absolute top-8 right-8 no-print flex gap-2">
+                        <button id="btn-save" class="px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2">
+                            <i class="fas fa-save"></i> DB 저장
+                        </button>
+                        <button onclick="window.print()" class="px-5 py-2 bg-slate-800 text-white rounded-md text-sm font-semibold hover:bg-slate-700 transition-colors shadow-sm flex items-center gap-2">
+                            <i class="fas fa-print"></i> PDF 인쇄
+                        </button>
+                    </div>
+
+                    <div class="text-center mb-8 border-b-2 border-slate-800 pb-6 mt-12 md:mt-0">
+                        <p class="text-sm font-bold text-slate-500 mb-2 uppercase tracking-widest">[EMKO STANDARD FORM]</p>
+                        <h1 class="text-3xl font-black text-slate-900 mb-2 tracking-tight">출하 전 3-Way Cross Check 확인서</h1>
+                        <p class="text-sm font-medium text-slate-600 uppercase tracking-widest">Pre-Shipment 3-Way Validation & Approval Sheet</p>
+                    </div>
+
+                    <table class="w-full mb-6 text-sm border-collapse border-2 border-slate-800">
+                        <tbody>
+                            <tr>
+                                <th class="border border-slate-800 bg-slate-100 p-3 w-[20%] text-left font-bold">프로젝트명</th>
+                                <td class="border border-slate-800 p-3 w-[30%]">
+                                    <input type="text" id="project_name" class="e-input font-semibold" placeholder="프로젝트명 입력">
+                                </td>
+                                <th class="border border-slate-800 bg-slate-100 p-3 w-[20%] text-left font-bold">검사일 / 출하일</th>
+                                <td class="border border-slate-800 p-3 w-[30%] text-slate-800">
+                                    <input type="date" id="inspection_date" class="e-input w-auto text-sm font-semibold">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="border border-slate-800 bg-slate-100 p-3 text-left font-bold">Package No.</th>
+                                <td class="border border-slate-800 p-3">
+                                    <input type="text" id="package_no" class="e-input" placeholder="Package No. 입력">
+                                </td>
+                                <th class="border border-slate-800 bg-slate-100 p-3 text-left font-bold">품목명 (Item)</th>
+                                <td class="border border-slate-800 p-3">
+                                    <input type="text" id="item_name" class="e-input" placeholder="품목명 입력">
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="mb-2 flex items-center justify-between">
+                        <h4 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                            <i class="fas fa-check-double text-slate-600"></i> ■ 담당자 교차 검증 (Cross Validation)
+                        </h4>
+                        <p class="text-xs text-slate-500 no-print">* 체크리스트 항목을 추가하거나 우측 버튼으로 삭제할 수 있습니다.</p>
+                    </div>
+
+                    <table class="w-full mb-6 text-[13px] border-collapse border-2 border-slate-800">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-900 border-b-2 border-slate-800">
+                                <th class="border border-slate-800 p-3 w-[15%] font-bold text-center">단계 / 담당</th>
+                                <th class="border border-slate-800 p-3 w-[45%] font-bold text-center">상세 체크 항목 (Check List)</th>
+                                <th class="border border-slate-800 p-3 w-[25%] font-bold text-center">증빙 자료 (Evidence)</th>
+                                <th class="border border-slate-800 p-3 w-[15%] font-bold text-center">확인 결과</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Step 1 -->
+                            <tr>
+                                <td class="border border-slate-800 p-3 font-bold bg-blue-50/30 text-center leading-relaxed">
+                                    <span class="text-blue-700 block mb-1 text-sm">1단계</span> 설계 담당자<br>
+                                    <span class="text-[11px] font-normal text-slate-500 block mt-1">(BOM 기준)</span>
+                                </td>
+                                <td class="border border-slate-800 p-3 align-top">
+                                    <ul id="step1-list" class="space-y-2 text-slate-800"></ul>
+                                    <button type="button" data-list="step1-list" class="btn-add no-print mt-3 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded flex items-center gap-1 border border-blue-200">
+                                        <i class="fas fa-plus"></i> 상세 항목 추가
+                                    </button>
+                                </td>
+                                <td class="border border-slate-800 p-3 text-slate-700 align-top">
+                                    <div class="space-y-4">
+                                        <div class="flex flex-col gap-1">
+                                            <span class="font-semibold text-xs text-slate-500">도면 번호 (DWG No.)</span>
+                                            <input type="text" id="step1_doc_no" class="e-input" placeholder="번호 입력">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <span class="font-semibold text-xs text-slate-500">BOM Rev.</span>
+                                            <input type="text" id="step1_doc_rev" class="e-input" placeholder="Rev. 정보 입력">
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="border border-slate-800 p-2 text-center align-middle">
+                                    <div class="flex flex-col gap-3 items-center">
+                                        <label class="inline-flex items-center font-bold text-green-700 cursor-pointer">
+                                            <input type="radio" name="res1" value="PASS" class="e-checkbox !rounded-full mr-2"> 적합
+                                        </label>
+                                        <label class="inline-flex items-center font-bold text-red-600 cursor-pointer">
+                                            <input type="radio" name="res1" value="FAIL" class="e-checkbox !rounded-full mr-2"> 부적합
+                                        </label>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            <!-- Step 2 -->
+                            <tr>
+                                <td class="border border-slate-800 p-3 font-bold bg-amber-50/30 text-center leading-relaxed">
+                                    <span class="text-amber-700 block mb-1 text-sm">2단계</span> 구매 담당자<br>
+                                    <span class="text-[11px] font-normal text-slate-500 block mt-1">(발주/PO 기준)</span>
+                                </td>
+                                <td class="border border-slate-800 p-3 align-top">
+                                    <ul id="step2-list" class="space-y-2 text-slate-800"></ul>
+                                    <button type="button" data-list="step2-list" class="btn-add no-print mt-3 text-xs font-semibold text-amber-600 hover:text-amber-800 bg-amber-50 px-2 py-1 rounded flex items-center gap-1 border border-amber-200">
+                                        <i class="fas fa-plus"></i> 상세 항목 추가
+                                    </button>
+                                </td>
+                                <td class="border border-slate-800 p-3 text-slate-700 align-top">
+                                    <div class="space-y-4">
+                                        <div class="flex flex-col gap-1">
+                                            <span class="font-semibold text-xs text-slate-500">발주 번호 (PO No.)</span>
+                                            <input type="text" id="step2_doc_no" class="e-input" placeholder="번호 입력">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="flex items-center gap-2 cursor-pointer mt-2">
+                                                <input type="checkbox" id="step2_evidence" class="e-checkbox">
+                                                <span class="font-semibold text-xs text-slate-700">입고증명서 확보</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="border border-slate-800 p-2 text-center align-middle">
+                                    <div class="flex flex-col gap-3 items-center">
+                                        <label class="inline-flex items-center font-bold text-green-700 cursor-pointer">
+                                            <input type="radio" name="res2" value="PASS" class="e-checkbox !rounded-full mr-2"> 적합
+                                        </label>
+                                        <label class="inline-flex items-center font-bold text-red-600 cursor-pointer">
+                                            <input type="radio" name="res2" value="FAIL" class="e-checkbox !rounded-full mr-2"> 부적합
+                                        </label>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Step 3 -->
+                            <tr>
+                                <td class="border border-slate-800 p-3 font-bold bg-purple-50/30 text-center leading-relaxed">
+                                    <span class="text-purple-700 block mb-1 text-sm">3단계</span> 물류 담당자<br>
+                                    <span class="text-[11px] font-normal text-slate-500 block mt-1">(Packing List 기준)</span>
+                                </td>
+                                <td class="border border-slate-800 p-3 align-top">
+                                    <ul id="step3-list" class="space-y-2 text-slate-800"></ul>
+                                    <button type="button" data-list="step3-list" class="btn-add no-print mt-3 text-xs font-semibold text-purple-600 hover:text-purple-800 bg-purple-50 px-2 py-1 rounded flex items-center gap-1 border border-purple-200">
+                                        <i class="fas fa-plus"></i> 상세 항목 추가
+                                    </button>
+                                </td>
+                                <td class="border border-slate-800 p-3 text-slate-700 align-top">
+                                    <div class="space-y-4">
+                                        <div class="flex flex-col gap-1">
+                                            <span class="font-semibold text-xs text-slate-500">P/L No.</span>
+                                            <input type="text" id="step3_doc_no" class="e-input" placeholder="번호 입력">
+                                        </div>
+                                        <div class="flex flex-col gap-1">
+                                            <label class="flex items-center gap-2 cursor-pointer mt-2">
+                                                <input type="checkbox" id="step3_evidence" class="e-checkbox">
+                                                <span class="font-semibold text-xs text-slate-700">출하 실물 사진 확보</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="border border-slate-800 p-2 text-center align-middle">
+                                    <div class="flex flex-col gap-3 items-center">
+                                        <label class="inline-flex items-center font-bold text-green-700 cursor-pointer">
+                                            <input type="radio" name="res3" value="PASS" class="e-checkbox !rounded-full mr-2"> 적합
+                                        </label>
+                                        <label class="inline-flex items-center font-bold text-red-600 cursor-pointer">
+                                            <input type="radio" name="res3" value="FAIL" class="e-checkbox !rounded-full mr-2"> 부적합
+                                        </label>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="bg-slate-50 border border-slate-300 p-4 mb-6 text-[13px]">
+                        <h5 class="font-bold text-slate-800 mb-3">※ 최종 첨부 증빙 리스트 (Check 첨부 문서)</h5>
+                        <div id="evidence_list" class="flex flex-wrap gap-6 text-slate-700 font-medium">
+                            <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" value="최신 설계 도면" class="ev-chk e-checkbox !mt-0"> 최신 설계 도면</label>
+                            <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" value="자재 BOM List" class="ev-chk e-checkbox !mt-0"> 자재 BOM List</label>
+                            <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" value="발주서(PO)" class="ev-chk e-checkbox !mt-0"> 발주서(PO)</label>
+                            <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" value="입고증" class="ev-chk e-checkbox !mt-0"> 입고증</label>
+                            <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" value="Packing List" class="ev-chk e-checkbox !mt-0"> Packing List</label>
+                            <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" value="출하 전 실물 사진" class="ev-chk e-checkbox !mt-0"> 출하 전 실물 사진</label>
+                            <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900 w-full md:w-auto mt-2 md:mt-0">
+                                <input type="checkbox" id="ev_other_chk" class="e-checkbox !mt-0"> 기타:
+                                <input type="text" id="ev_other_text" class="e-input w-48 ml-2" placeholder="기타 증빙 입력">
+                            </label>
+                        </div>
+                    </div>
+
+                    <h4 class="font-bold text-slate-800 mb-2 text-lg flex items-center gap-2">
+                        <i class="fas fa-pen-nib text-slate-600"></i> ■ 서명 및 출하 승인 (Sign-off)
+                    </h4>
+                    <table class="w-full text-sm border-collapse border-2 border-slate-800 text-center h-28 table-fixed">
+                        <tbody>
+                            <tr>
+                                <th class="border border-slate-800 bg-slate-100 p-2 font-bold text-slate-800">1. 설계 확인</th>
+                                <th class="border border-slate-800 bg-slate-100 p-2 font-bold text-slate-800">2. 구매 확인</th>
+                                <th class="border border-slate-800 bg-slate-100 p-2 font-bold text-slate-800">3. 출하 확인</th>
+                                <th class="border border-slate-800 bg-slate-800 text-white p-2 font-bold text-lg">최종 출하 승인<br><span class="text-xs font-normal text-slate-300">(PM / 부서장)</span></th>
+                            </tr>
+                            <tr>
+                                <td class="border border-slate-800 p-3 align-bottom pb-4 text-slate-600 text-sm">
+                                    <div class="flex flex-col items-center gap-1">
+                                        <div id="sign1-status" class="text-xs text-slate-400">대기 중</div>
+                                        <button id="btn-sign1" class="text-xs bg-slate-200 hover:bg-slate-300 px-2 py-1 rounded text-slate-700">서명하기</button>
+                                    </div>
+                                </td>
+                                <td class="border border-slate-800 p-3 align-bottom pb-4 text-slate-600 text-sm">
+                                    <div class="flex flex-col items-center gap-1">
+                                        <div id="sign2-status" class="text-xs text-slate-400">대기 중</div>
+                                        <button id="btn-sign2" class="text-xs bg-slate-200 hover:bg-slate-300 px-2 py-1 rounded text-slate-700">서명하기</button>
+                                    </div>
+                                </td>
+                                <td class="border border-slate-800 p-3 align-bottom pb-4 text-slate-600 text-sm">
+                                    <div class="flex flex-col items-center gap-1">
+                                        <div id="sign3-status" class="text-xs text-slate-400">대기 중</div>
+                                        <button id="btn-sign3" class="text-xs bg-slate-200 hover:bg-slate-300 px-2 py-1 rounded text-slate-700">서명하기</button>
+                                    </div>
+                                </td>
+                                <td class="border border-slate-800 p-3 align-bottom pb-4 font-bold bg-slate-50 text-sm text-slate-800">
+                                    <div class="flex flex-col items-center gap-1">
+                                        <div id="sign-pm-status" class="text-xs text-slate-400">대기 중</div>
+                                        <button id="btn-sign-pm" class="text-xs bg-slate-800 text-white hover:bg-slate-700 px-3 py-1 rounded shadow">승인 (서명)</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div class="mt-5 p-3 bg-red-50 border border-red-200 rounded text-center">
+                        <p class="text-[13px] text-red-700 font-bold tracking-wide">
+                            <i class="fas fa-exclamation-triangle mr-1"></i> ※ 위 3단계 항목의 '적합' 체크, 필수 증빙자료 첨부 및 서명이 모두 완료되지 않은 경우 <span class="underline">현장 반출을 엄격히 금지</span>합니다.
+                        </p>
+                    </div>
+                    
+                </div>
+            </div> <!-- form-view -->
+        </div> <!-- flex-1 -->
+    </div> <!-- app-layout -->
 
 </body>
 </html>
