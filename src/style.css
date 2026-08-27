@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body { background-color: #f1f5f9; }
+
+/* 전자 서식용 입력창 스타일 */
+.e-input {
+    width: 100%;
+    background-color: transparent;
+    border: none;
+    border-bottom: 1px solid #94a3b8;
+    padding: 2px 4px;
+    outline: none;
+    transition: all 0.2s;
+    color: #0f172a;
+}
+.e-input:focus {
+    border-bottom-color: #2563eb;
+    background-color: #eff6ff;
+}
+.e-input:hover:not(:focus) {
+    border-bottom-color: #64748b;
+}
+
+/* 체크리스트 항목 입력창 전용 스타일 */
+.list-input {
+    width: 100%;
+    background-color: transparent;
+    border: none;
+    border-bottom: 1px solid transparent;
+    outline: none;
+    padding: 2px 0;
+    color: #1e293b;
+}
+.list-input:hover { border-bottom: 1px dashed #cbd5e1; }
+.list-input:focus { border-bottom: 1px solid #3b82f6; }
+
+/* 커스텀 체크박스/라디오 */
+.e-checkbox {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #475569;
+    margin-top: 4px;
+}
+
+/* 출력 최적화 스타일 */
+@media print {
+    body { background-color: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+    .print-container { max-width: 100% !important; margin: 0 auto; padding: 0 !important; box-shadow: none !important; border: none !important; }
+    @page { size: A4; margin: 15mm; }
+    
+    /* 출력 시 입력창 테두리 제거 및 배경 투명화 */
+    .e-input, .list-input {
+        border-bottom: 1px solid transparent !important;
+        background-color: transparent !important;
+        padding: 0 !important;
+    }
+    /* 빈 입력창은 출력 시 점선으로 표시하여 기재란임을 안내 */
+    .e-input:placeholder-shown {
+        border-bottom: 1px dashed #cbd5e1 !important;
+    }
+}
