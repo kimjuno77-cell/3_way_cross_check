@@ -38,6 +38,28 @@
         </div>
     </div>
 
+    <!-- 비밀번호 변경 모달 -->
+    <div id="pw-modal" class="hidden fixed inset-0 bg-black/50 z-[100] flex items-center justify-center">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">비밀번호 변경</h3>
+            <form id="pw-form" class="flex flex-col gap-3">
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">새 비밀번호</label>
+                    <input type="password" id="pw-new" required minlength="6" class="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">새 비밀번호 확인</label>
+                    <input type="password" id="pw-confirm" required minlength="6" class="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:border-blue-500">
+                </div>
+                <p id="pw-msg" class="text-xs text-red-500"></p>
+                <div class="flex gap-2 mt-2">
+                    <button type="button" id="btn-pw-cancel" class="flex-1 bg-slate-200 text-slate-700 font-bold py-2 px-4 rounded hover:bg-slate-300">취소</button>
+                    <button type="submit" id="btn-pw-submit" class="flex-1 bg-blue-600 text-white font-bold py-2 px-4 rounded hover:bg-blue-700">변경</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- 2. 메인 애플리케이션 레이아웃 (인증 후) -->
     <div id="app-layout" class="hidden h-full flex-col">
         <!-- 네비게이션 바 -->
@@ -46,13 +68,51 @@
                 <i class="fas fa-boxes text-blue-600"></i> EMKO 3-Way Cross Check
             </div>
             <div class="flex gap-4 items-center">
-                <span id="user-email-display" class="text-sm font-medium text-slate-600"></span>
+                <span id="user-email-display" class="text-sm font-medium text-slate-600 hidden md:inline"></span>
+                <button id="btn-admin-panel" class="hidden text-sm font-bold text-blue-600 hover:underline"><i class="fas fa-users-cog"></i> 관리자</button>
+                <button id="btn-change-pw" class="text-sm font-semibold text-slate-500 hover:text-slate-800 transition"><i class="fas fa-key"></i> 비번변경</button>
                 <button id="btn-logout" class="text-sm font-semibold text-slate-500 hover:text-red-600 transition"><i class="fas fa-sign-out-alt"></i> 로그아웃</button>
             </div>
         </nav>
 
         <div class="flex-1 overflow-auto bg-slate-50 relative p-4 md:p-8">
             
+            <!-- 미승인 화면 -->
+            <div id="pending-view" class="max-w-md mx-auto mt-20 bg-white p-8 border border-slate-200 rounded-lg shadow-sm text-center hidden">
+                <i class="fas fa-clock text-4xl text-amber-500 mb-4"></i>
+                <h2 class="text-xl font-bold text-slate-800 mb-2">승인 대기 중</h2>
+                <p class="text-slate-600 text-sm mb-6">가입이 완료되었으나 아직 관리자의 승인이 이루어지지 않았습니다.<br>승인 완료 후 시스템을 이용하실 수 있습니다.</p>
+                <button id="btn-pending-logout" class="px-4 py-2 bg-slate-800 text-white rounded hover:bg-slate-700 text-sm font-bold">돌아가기 (로그아웃)</button>
+            </div>
+
+            <!-- 관리자 패널 뷰 -->
+            <div id="admin-view" class="max-w-5xl mx-auto hidden">
+                <div class="flex justify-between items-end mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800"><i class="fas fa-users-cog text-blue-600"></i> 사용자 관리</h2>
+                        <p class="text-sm text-slate-500 mt-1">가입한 사용자들의 승인 상태를 관리합니다.</p>
+                    </div>
+                    <button id="btn-back-from-admin" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-md text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm">
+                        <i class="fas fa-arrow-left"></i> 대시보드로 돌아가기
+                    </button>
+                </div>
+                <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-100 text-slate-700">
+                            <tr>
+                                <th class="p-4 font-bold border-b border-slate-200">이메일</th>
+                                <th class="p-4 font-bold border-b border-slate-200">권한</th>
+                                <th class="p-4 font-bold border-b border-slate-200">가입일시</th>
+                                <th class="p-4 font-bold border-b border-slate-200 text-center">승인 상태</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-user-list" class="divide-y divide-slate-100 text-slate-800">
+                            <!-- JS 렌더링 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- 2-A. 대시보드 뷰 -->
             <div id="dashboard-view" class="max-w-5xl mx-auto hidden">
                 <div class="flex justify-between items-end mb-6">

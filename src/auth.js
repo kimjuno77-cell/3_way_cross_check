@@ -67,6 +67,52 @@ export function setupAuth(onSuccess, onLogout) {
             if (onLogoutCallback) onLogoutCallback();
         });
     }
+
+    // 비밀번호 변경 모달 처리
+    const btnChangePw = document.getElementById('btn-change-pw');
+    const pwModal = document.getElementById('pw-modal');
+    const pwForm = document.getElementById('pw-form');
+    const btnPwCancel = document.getElementById('btn-pw-cancel');
+    const pwMsg = document.getElementById('pw-msg');
+    const pwNew = document.getElementById('pw-new');
+    const pwConfirm = document.getElementById('pw-confirm');
+
+    if (btnChangePw && pwModal && pwForm) {
+        btnChangePw.addEventListener('click', () => {
+            pwModal.classList.remove('hidden');
+            pwMsg.textContent = '';
+            pwNew.value = '';
+            pwConfirm.value = '';
+        });
+
+        btnPwCancel.addEventListener('click', () => {
+            pwModal.classList.add('hidden');
+        });
+
+        pwForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (pwNew.value !== pwConfirm.value) {
+                pwMsg.textContent = '비밀번호가 일치하지 않습니다.';
+                return;
+            }
+            if (pwNew.value.length < 6) {
+                pwMsg.textContent = '비밀번호는 6자리 이상이어야 합니다.';
+                return;
+            }
+
+            pwMsg.className = 'text-xs text-blue-600';
+            pwMsg.textContent = '변경 중...';
+
+            const { error } = await supabase.auth.updateUser({ password: pwNew.value });
+            if (error) {
+                pwMsg.className = 'text-xs text-red-500';
+                pwMsg.textContent = '변경 실패: ' + error.message;
+            } else {
+                alert('비밀번호가 성공적으로 변경되었습니다.');
+                pwModal.classList.add('hidden');
+            }
+        });
+    }
 }
 
 export async function checkSession() {
