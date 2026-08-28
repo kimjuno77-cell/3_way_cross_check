@@ -445,9 +445,7 @@ async function saveFormData() {
             if (formErr) throw formErr;
         }
 
-        // 3. Step & Checklists 처리
-        await supabase.from('form_steps').delete().eq('form_id', formId);
-        
+        // 3. Step & Checklists 처리 (기존 서명 정보를 안전하게 보존하며 필드 및 체크리스트 갱신)
         await saveStepData(1, formId, 'step1_doc_no', 'step1_doc_rev', null, 'res1', 'step1-list');
         await saveStepData(2, formId, 'step2_doc_no', null, 'step2_evidence', 'res2', 'step2-list');
         await saveStepData(3, formId, 'step3_doc_no', null, 'step3_evidence', 'res3', 'step3-list');
@@ -494,27 +492,59 @@ async function saveStepData(stepNum, formId, docNoId, docRevId, evidenceId, radi
     const radioSelected = document.querySelector(`input[name="${radioName}"]:checked`);
     const resStatus = radioSelected ? radioSelected.value : 'PENDING';
 
-    const { data: step, error: stepErr } = await supabase
+    // 설명: 기존 step 데이터가 있는지 먼저 조회하여 기존 서명(manager_sign_user_id, manager_signer_name, manager_signed_at)을 보존
+    const { data: existingStep } = await supabase
         .from('form_steps')
-        .insert([{
-            form_id: formId,
-            step_number: stepNum,
-            document_no: docNo,
-            document_rev: docRev,
-            evidence_secured: evSecured,
-            result_status: resStatus
-        }])
-        .select()
-        .single();
-        
-    if (stepErr) throw stepErr;
+        .select('id')
+        .eq('form_id', formId)
+        .eq('step_number', stepNum)
+        .maybeSingle();
+
+    let stepId;
+    if (existingStep) {
+        // 기존 step이 있으면 서명 정보는 유지한 채 문서번호/결과 상태만 UPDATE
+        const { data: updatedStep, error: stepErr } = await supabase
+            .from('form_steps')
+            .update({
+                document_no: docNo,
+                document_rev: docRev,
+                evidence_secured: evSecured,
+                result_status: resStatus
+            })
+            .eq('id', existingStep.id)
+            .select()
+            .single();
+            
+        if (stepErr) throw stepErr;
+        stepId = updatedStep.id;
+    } else {
+        // 신규 step 생성
+        const { data: newStep, error: stepErr } = await supabase
+            .from('form_steps')
+            .insert([{
+                form_id: formId,
+                step_number: stepNum,
+                document_no: docNo,
+                document_rev: docRev,
+                evidence_secured: evSecured,
+                result_status: resStatus
+            }])
+            .select()
+            .single();
+            
+        if (stepErr) throw stepErr;
+        stepId = newStep.id;
+    }
     
+    // 해당 step의 체크리스트 항목만 안전하게 갱신
+    await supabase.from('step_checklist_items').delete().eq('step_id', stepId);
+
     const listItems = document.querySelectorAll(`#${listId} li`);
     const chkInserts = Array.from(listItems).map((li, index) => {
         const checkbox = li.querySelector('input[type="checkbox"]');
         const textInput = li.querySelector('input[type="text"]');
         return {
-            step_id: step.id,
+            step_id: stepId,
             content: textInput ? textInput.value : '',
             is_checked: checkbox ? checkbox.checked : false,
             sort_order: index
