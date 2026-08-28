@@ -45,21 +45,123 @@ body { background-color: #f1f5f9; }
     margin-top: 4px;
 }
 
-/* 출력 최적화 스타일 */
+/* 출력 최적화 스타일 (A4 세로 정밀 맞춤) */
 @media print {
-    body { background-color: white; margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .no-print { display: none !important; }
-    .print-container { max-width: 100% !important; margin: 0 auto; padding: 0 !important; box-shadow: none !important; border: none !important; }
-    @page { size: A4; margin: 15mm; }
-    
-    /* 출력 시 입력창 테두리 제거 및 배경 투명화 */
+    @page {
+        size: A4 portrait;
+        margin: 8mm 10mm;
+    }
+
+    html, body {
+        background: #ffffff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        height: auto !important;
+        min-height: auto !important;
+        overflow: visible !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* 화면 UI 요소 완벽 숨김 */
+    .no-print,
+    nav,
+    #auth-view,
+    #signup-modal,
+    #pw-modal,
+    #admin-view,
+    #dashboard-view,
+    #pending-view,
+    #btn-back-dashboard,
+    .btn-add,
+    .btn-remove {
+        display: none !important;
+    }
+
+    #app-layout {
+        display: block !important;
+        height: auto !important;
+        overflow: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .flex-1, #form-view {
+        display: block !important;
+        overflow: visible !important;
+        height: auto !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: transparent !important;
+    }
+
+    /* 인쇄 컨테이너 A4 최적화 */
+    .print-container {
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+        padding: 8px 12px !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: transparent !important;
+    }
+
+    /* 헤더 타이틀 컴팩트 조정 */
+    .print-container .border-b-2 {
+        margin-top: 0 !important;
+        margin-bottom: 12px !important;
+        padding-bottom: 8px !important;
+    }
+
+    .print-container h1 {
+        font-size: 20px !important;
+        margin-bottom: 4px !important;
+    }
+
+    /* 테이블 요소 줄바꿈 및 크기 제어 */
+    table {
+        page-break-inside: avoid !important;
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+
+    th, td {
+        padding: 4px 6px !important;
+        font-size: 11px !important;
+    }
+
+    /* 출력 시 입력창 텍스트 최적화 */
     .e-input, .list-input {
         border-bottom: 1px solid transparent !important;
         background-color: transparent !important;
         padding: 0 !important;
+        font-size: 11px !important;
+        color: #000000 !important;
     }
-    /* 빈 입력창은 출력 시 점선으로 표시하여 기재란임을 안내 */
+
+    /* 빈 입력창은 출력 시 은은한 밑줄 표시 */
     .e-input:placeholder-shown {
-        border-bottom: 1px dashed #cbd5e1 !important;
+        border-bottom: 1px dotted #94a3b8 !important;
+    }
+
+    /* 체크리스트 간격 */
+    ul[id$="-list"] {
+        margin-top: 2px !important;
+    }
+    ul[id$="-list"] li {
+        margin-bottom: 3px !important;
+        font-size: 11px !important;
+    }
+
+    /* 서명란 높이 조절 */
+    table.table-fixed {
+        height: 70px !important;
+    }
+
+    /* 경고 박스 */
+    .mt-5.p-3.bg-red-50 {
+        margin-top: 8px !important;
+        padding: 6px !important;
+        font-size: 10.5px !important;
     }
 }

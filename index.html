@@ -87,9 +87,9 @@
     </div>
 
     <!-- 2. 메인 애플리케이션 레이아웃 (인증 후) -->
-    <div id="app-layout" class="hidden h-full flex-col">
+    <div id="app-layout" class="hidden h-full flex flex-col overflow-hidden">
         <!-- 네비게이션 바 -->
-        <nav class="bg-white shadow px-6 py-4 flex justify-between items-center z-10 shrink-0">
+        <nav class="bg-white shadow px-6 py-4 flex justify-between items-center z-10 shrink-0 no-print">
             <div class="font-bold text-xl text-slate-800 flex items-center gap-2 cursor-pointer" id="nav-logo">
                 <i class="fas fa-boxes text-blue-600"></i> EMKO 3-Way Cross Check
             </div>
@@ -101,7 +101,7 @@
             </div>
         </nav>
 
-        <div class="flex-1 overflow-auto bg-slate-50 relative p-4 md:p-8">
+        <div class="flex-1 overflow-y-auto bg-slate-50 relative p-4 md:p-8">
             
             <!-- 미승인 화면 -->
             <div id="pending-view" class="max-w-md mx-auto mt-20 bg-white p-8 border border-slate-200 rounded-lg shadow-sm text-center hidden">
@@ -167,7 +167,7 @@
 
             <!-- 2-B. 폼 뷰 (상세 문서 조회 및 편집) -->
             <div id="form-view" class="hidden pb-20">
-                <div class="max-w-[900px] mx-auto mb-4 flex gap-2">
+                <div class="max-w-[900px] mx-auto mb-4 flex gap-2 no-print">
                     <button id="btn-back-dashboard" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-md text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm">
                         <i class="fas fa-arrow-left"></i> 목록으로 돌아가기
                     </button>
