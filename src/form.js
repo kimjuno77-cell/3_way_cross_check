@@ -385,11 +385,42 @@ async function saveFormData() {
             await supabase.from('projects').update({ name: projectName }).eq('id', projectId);
         }
 
-        // 2. Form 처리
+        // 2. 동일 프로젝트 내 Package No. 중복 검증
+        const packageNo = document.getElementById('package_no').value.trim();
+        const itemName = document.getElementById('item_name').value.trim();
+
+        if (packageNo) {
+            let dupQuery = supabase
+                .from('cross_check_forms')
+                .select('id, package_no')
+                .eq('project_id', projectId)
+                .eq('package_no', packageNo);
+
+            // 기존 문서를 수정하는 경우 자기 자신(현재 formId)은 중복 검사에서 제외
+            if (formId) {
+                dupQuery = dupQuery.neq('id', formId);
+            }
+
+            const { data: duplicateForms, error: dupErr } = await dupQuery;
+            if (dupErr) throw dupErr;
+
+            if (duplicateForms && duplicateForms.length > 0) {
+                alert(`⚠️ [Package No. 중복 경고]\n\n해당 프로젝트('${projectName}')에 이미 동일한 Package No.('${packageNo}')가 등록되어 있습니다.\n\n동일한 번호로는 중복 등록할 수 없으니 다른 Package No.를 입력해 주세요.`);
+                const pkgInput = document.getElementById('package_no');
+                if (pkgInput) {
+                    pkgInput.focus();
+                    pkgInput.classList.add('border-red-500', 'bg-red-50');
+                    setTimeout(() => pkgInput.classList.remove('border-red-500', 'bg-red-50'), 3000);
+                }
+                return;
+            }
+        }
+
+        // 3. Form 처리
         const formData = {
             project_id: projectId,
-            package_no: document.getElementById('package_no').value.trim(),
-            item_name: document.getElementById('item_name').value.trim(),
+            package_no: packageNo,
+            item_name: itemName,
             inspection_date: document.getElementById('inspection_date').value || null
         };
 
