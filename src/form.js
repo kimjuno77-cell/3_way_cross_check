@@ -75,16 +75,26 @@ export function setupForm(backCb) {
         });
     });
 
-    // 항목 삭제 (위임)
+    // 항목 삭제 및 서명 취소 (위임)
     const formView = document.getElementById('form-view');
     if (formView) {
-        formView.addEventListener('click', (e) => {
+        formView.addEventListener('click', async (e) => {
             const removeBtn = e.target.closest('.btn-remove');
             if (removeBtn) {
                 const li = removeBtn.closest('li');
                 if (li) {
                     li.style.opacity = '0';
                     setTimeout(() => li.remove(), 200);
+                }
+            }
+
+            const cancelSignBtn = e.target.closest('.btn-cancel-sign');
+            if (cancelSignBtn) {
+                e.preventDefault();
+                const targetBtnId = cancelSignBtn.getAttribute('data-btn-id');
+                const targetStatusId = cancelSignBtn.getAttribute('data-status-id');
+                if (targetBtnId && targetStatusId) {
+                    await handleCancelSign(targetBtnId, targetStatusId);
                 }
             }
         });
@@ -210,16 +220,27 @@ function resetSignUI(statusId, btnId) {
     if (btEl) btEl.classList.remove('hidden');
 }
 
-function setSignUI(statusId, btnId, isSigned, signerName = '', signedAt = null) {
+function setSignUI(statusId, btnId, isSigned, signerName = '', signedAt = null, signerUserId = null) {
     const stEl = document.getElementById(statusId);
     const btEl = document.getElementById(btnId);
     if (isSigned) {
         const dateStr = signedAt ? new Date(signedAt).toLocaleDateString() : '';
         const nameText = signerName ? signerName : '서명 완료';
+
+        // 서명 취소 권한 검증: 관리자(ADMIN)이거나 실제 서명한 사용자 본인
+        const isSigner = currentUserProfile && signerUserId && (signerUserId === currentUserProfile.id);
+        const isAdmin = currentUserProfile && (currentUserProfile.role === 'ADMIN');
+        const canCancel = isAdmin || isSigner;
+
         if (stEl) {
             stEl.innerHTML = `
                 <div class="font-bold text-slate-900 text-sm tracking-wider">${nameText}</div>
                 <div class="text-[10px] text-blue-600 font-semibold mt-0.5">✓ 서명완료 ${dateStr ? `(${dateStr})` : ''}</div>
+                ${canCancel ? `
+                    <button type="button" class="btn-cancel-sign no-print text-[11px] text-red-500 hover:text-red-700 hover:underline mt-1 block mx-auto cursor-pointer font-medium" data-btn-id="${btnId}" data-status-id="${statusId}">
+                        <i class="fas fa-undo-alt mr-0.5"></i>서명 취소
+                    </button>
+                ` : ''}
             `;
             stEl.className = 'text-center py-1';
         }
@@ -267,8 +288,8 @@ export async function loadFormContent(formId) {
             authorInfoEl.innerHTML = `<i class="fas fa-user-edit mr-1"></i>작성자: <span class="text-slate-600 font-semibold">${authorName}</span> (${createdDate})`;
         }
 
-        // 서명 데이터 바인딩
-        setSignUI('sign-pm-status', 'btn-sign-pm', !!form.pm_sign_user_id, form.pm_signer_name, form.pm_signed_at);
+        // 서명 데이터 바인딩 (서명 취소 권한 확인을 위해 서명자 User ID 전달)
+        setSignUI('sign-pm-status', 'btn-sign-pm', !!form.pm_sign_user_id, form.pm_signer_name, form.pm_signed_at, form.pm_sign_user_id);
 
         if (form.form_steps) {
             form.form_steps.forEach(step => {
@@ -292,8 +313,8 @@ export async function loadFormContent(formId) {
                     if (radio) radio.checked = true;
                 }
 
-                // 서명 바인딩 (서명자 성명 및 일시 전달)
-                setSignUI(`sign${sNum}-status`, `btn-sign${sNum}`, !!step.manager_sign_user_id, step.manager_signer_name, step.manager_signed_at);
+                // 서명 바인딩 (서명자 성명, 일시 및 작성자 User ID 전달)
+                setSignUI(`sign${sNum}-status`, `btn-sign${sNum}`, !!step.manager_sign_user_id, step.manager_signer_name, step.manager_signed_at, step.manager_sign_user_id);
 
                 // 체크리스트 바인딩
                 if (step.step_checklist_items && step.step_checklist_items.length > 0) {
@@ -652,7 +673,7 @@ async function handleSignOff(btnId) {
                 pm_signed_at: nowIso
             }).eq('id', formId);
 
-            setSignUI('sign-pm-status', 'btn-sign-pm', true, signerName, nowIso);
+            setSignUI('sign-pm-status', 'btn-sign-pm', true, signerName, nowIso, user.id);
         } else {
             const stepMap = { 'btn-sign1': 1, 'btn-sign2': 2, 'btn-sign3': 3 };
             const stepNum = stepMap[btnId];
@@ -666,11 +687,91 @@ async function handleSignOff(btnId) {
                 .eq('form_id', formId)
                 .eq('step_number', stepNum);
                 
-            setSignUI(`sign${stepNum}-status`, btnId, true, signerName, nowIso);
+            setSignUI(`sign${stepNum}-status`, btnId, true, signerName, nowIso, user.id);
         }
         alert(`'${signerName}' 님의 서명이 성공적으로 등록되었습니다.`);
     } catch (err) {
         console.error("서명 오류:", err);
         alert("서명 처리 중 오류가 발생했습니다: " + err.message);
+    }
+}
+
+// ---------------------------------------------------
+// 서명 취소 (Sign Cancellation) 핸들러
+// ---------------------------------------------------
+async function handleCancelSign(btnId, statusId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        alert("로그인이 필요합니다.");
+        return;
+    }
+    const formId = document.getElementById('current_form_id').value;
+    if (!formId) return;
+
+    // 단계명 확인
+    const stepTitleMap = {
+        'btn-sign1': '1단계 (설계)',
+        'btn-sign2': '2단계 (구매)',
+        'btn-sign3': '3단계 (물류)',
+        'btn-sign-pm': '최종 출하 승인 (PM)'
+    };
+    const stepTitle = stepTitleMap[btnId] || '서명';
+
+    // 서명 취소 권한 사전 검증
+    try {
+        let signUserId = null;
+        if (btnId === 'btn-sign-pm') {
+            const { data: form } = await supabase.from('cross_check_forms').select('pm_sign_user_id').eq('id', formId).single();
+            signUserId = form?.pm_sign_user_id;
+        } else {
+            const stepMap = { 'btn-sign1': 1, 'btn-sign2': 2, 'btn-sign3': 3 };
+            const stepNum = stepMap[btnId];
+            const { data: step } = await supabase.from('form_steps').select('manager_sign_user_id').eq('form_id', formId).eq('step_number', stepNum).single();
+            signUserId = step?.manager_sign_user_id;
+        }
+
+        const isSigner = currentUserProfile && signUserId && (signUserId === currentUserProfile.id);
+        const isAdmin = currentUserProfile && (currentUserProfile.role === 'ADMIN');
+
+        if (!isAdmin && !isSigner) {
+            alert("서명 취소 권한이 없습니다.\n관리자(ADMIN) 또는 서명 당사자 본인만 서명을 취소할 수 있습니다.");
+            return;
+        }
+    } catch (err) {
+        console.error("서명 권한 검증 오류:", err);
+    }
+
+    if (!confirm(`[${stepTitle}] 등록된 서명을 정말로 취소하시겠습니까?\n취소 후 필요시 다시 서명할 수 있습니다.`)) {
+        return;
+    }
+
+    try {
+        if (btnId === 'btn-sign-pm') {
+            await supabase.from('cross_check_forms').update({ 
+                pm_sign_user_id: null,
+                pm_signer_name: null,
+                pm_signed_at: null
+            }).eq('id', formId);
+
+            resetSignUI('sign-pm-status', 'btn-sign-pm');
+        } else {
+            const stepMap = { 'btn-sign1': 1, 'btn-sign2': 2, 'btn-sign3': 3 };
+            const stepNum = stepMap[btnId];
+
+            await supabase.from('form_steps')
+                .update({ 
+                    manager_sign_user_id: null,
+                    manager_signer_name: null,
+                    manager_signed_at: null
+                })
+                .eq('form_id', formId)
+                .eq('step_number', stepNum);
+
+            resetSignUI(`sign${stepNum}-status`, btnId);
+        }
+        alert(`[${stepTitle}] 서명이 성공적으로 취소되었습니다.`);
+    } catch (err) {
+        console.error("서명 취소 처리 오류:", err);
+        alert("서명 취소 중 오류가 발생했습니다: " + err.message);
     }
 }
