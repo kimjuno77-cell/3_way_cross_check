@@ -63,6 +63,42 @@ export function setupForm(backCb) {
     });
 }
 
+// 설명: 새 문서 작성 시 각 단계별로 기본 표시되는 체크리스트 항목 목록
+const DEFAULT_CHECKLIST = {
+    'step1-list': [
+        'BOM 수량과 설계 도면 수량 일치 여부 확인',
+        '자재 규격(Spec) 도면 대비 일치 여부 확인',
+        '최신 Rev. 도면 적용 여부 확인',
+    ],
+    'step2-list': [
+        '발주서(PO) 품목 및 수량과 BOM 일치 여부 확인',
+        '납품된 자재의 입고 검수 완료 여부 확인',
+        '발주 잔량 또는 미납 품목 유무 확인',
+    ],
+    'step3-list': [
+        'Packing List 품목/수량과 실물 일치 여부 확인',
+        '포장 상태 및 라벨링 적정성 확인',
+        '출하 전 외관 검사(파손/오염) 완료 여부 확인',
+    ],
+};
+
+// 설명: 특정 리스트에 체크리스트 항목 배열을 렌더링하는 헬퍼 함수
+function renderChecklistItems(listId, items) {
+    const ul = document.getElementById(listId);
+    items.forEach(text => {
+        const li = document.createElement('li');
+        li.className = "flex items-start group relative mb-2";
+        li.innerHTML = `
+            <input type="checkbox" class="e-checkbox mr-2">
+            <input type="text" value="${text}" class="list-input flex-1">
+            <button type="button" class="btn-remove no-print opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 ml-2 py-1 px-2 rounded hover:bg-red-50 transition-all" title="항목 삭제">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        ul.appendChild(li);
+    });
+}
+
 // 빈 폼으로 초기화
 export function clearFormContent() {
     document.getElementById('current_form_id').value = '';
@@ -73,7 +109,13 @@ export function clearFormContent() {
     document.getElementById('item_name').value = '';
     document.getElementById('inspection_date').value = '';
 
-    ['step1-list', 'step2-list', 'step3-list'].forEach(id => document.getElementById(id).innerHTML = '');
+    // 설명: 기존 리스트 초기화 후 기본 항목 삽입
+    ['step1-list', 'step2-list', 'step3-list'].forEach(id => {
+        document.getElementById(id).innerHTML = '';
+        if (DEFAULT_CHECKLIST[id]) {
+            renderChecklistItems(id, DEFAULT_CHECKLIST[id]);
+        }
+    });
     
     ['step1_doc_no', 'step1_doc_rev', 'step2_doc_no', 'step3_doc_no'].forEach(id => {
         if(document.getElementById(id)) document.getElementById(id).value = '';
