@@ -114,12 +114,11 @@ export function checkCanEdit(form) {
     if (!currentUserProfile) return false;
     // 관리자(ADMIN)는 모든 문서 수정/삭제 가능
     if (currentUserProfile.role === 'ADMIN') return true;
-    // 신규 작성 문서(ID 없음)는 누구나 작성/수정 가능
+    // 신규 작성 문서(ID 없음)는 누구나 작성 가능
     if (!form || !form.id) return true;
-    // 본인이 작성한 문서인 경우
+    // 오직 본인이 작성한 문서인 경우에만 수정 가능
     if (form.created_by && form.created_by === currentUserProfile.id) return true;
-    // 기존에 작성자 정보가 없는 문서의 경우
-    if (!form.created_by) return true;
+    // 타인이 작성한 문서 및 작성자 미지정 문서는 일반 회원 수정 불가 (읽기 전용)
     return false;
 }
 
@@ -503,6 +502,27 @@ async function saveStepData(stepNum, formId, docNoId, docRevId, evidenceId, radi
 async function deleteCurrentForm() {
     const formId = document.getElementById('current_form_id').value;
     if (!formId) return;
+
+    // 현재 문서의 작성자 정보 조회하여 삭제 권한 검증
+    try {
+        const { data: form, error: fetchErr } = await supabase
+            .from('cross_check_forms')
+            .select('created_by')
+            .eq('id', formId)
+            .single();
+
+        if (fetchErr) throw fetchErr;
+
+        const isAuthor = currentUserProfile && form && form.created_by && (form.created_by === currentUserProfile.id);
+        const isAdmin = currentUserProfile && (currentUserProfile.role === 'ADMIN');
+
+        if (!isAdmin && !isAuthor) {
+            alert('삭제 권한이 없습니다.\n관리자(ADMIN) 또는 본인이 직접 작성한 확인서만 삭제할 수 있습니다.');
+            return;
+        }
+    } catch (err) {
+        console.error("권한 검증 오류:", err);
+    }
 
     if (!confirm('정말로 이 출하 확인서 문서를 삭제하시겠습니까?\n삭제된 데이터는 영구적으로 복구할 수 없습니다.')) {
         return;

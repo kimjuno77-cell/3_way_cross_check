@@ -30,12 +30,12 @@ WITH CHECK (auth.role() = 'authenticated');
 CREATE POLICY "Admins or owners can update forms" 
 ON public.cross_check_forms FOR UPDATE 
 USING (
-    public.is_admin() OR created_by = auth.uid() OR created_by IS NULL
+    public.is_admin() OR (created_by IS NOT NULL AND created_by = auth.uid())
 );
 
 -- 관리자(ADMIN) 또는 작성자 본인만 삭제할 수 있음
 CREATE POLICY "Admins or owners can delete forms" 
 ON public.cross_check_forms FOR DELETE 
 USING (
-    public.is_admin() OR created_by = auth.uid() OR created_by IS NULL
+    public.is_admin() OR (created_by IS NOT NULL AND created_by = auth.uid())
 );

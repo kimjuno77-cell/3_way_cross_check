@@ -151,11 +151,11 @@ function renderGroupedList(searchQuery = '') {
             const isPmSigned = !!form.pm_sign_user_id;
             const dateStr = form.inspection_date ? form.inspection_date : '<span class="text-slate-400">미지정</span>';
             const authorStr = form.author_email ? form.author_email.split('@')[0] : '미지정';
-            const isAuthorOrAdmin = currentUserProfile && (
-                currentUserProfile.role === 'ADMIN' || 
-                form.created_by === currentUserProfile.id || 
-                !form.created_by
-            );
+            
+            // 엄격한 권한 체크: 관리자(ADMIN)이거나 실제 작성자(created_by) 본인인 경우만 수정/삭제 허용
+            const isAuthor = currentUserProfile && form.created_by && (form.created_by === currentUserProfile.id);
+            const isAdmin = currentUserProfile && (currentUserProfile.role === 'ADMIN');
+            const canManage = isAdmin || isAuthor;
 
             tr.innerHTML = `
                 <td class="py-3.5 px-6 font-bold text-blue-700">
@@ -164,7 +164,7 @@ function renderGroupedList(searchQuery = '') {
                 <td class="py-3.5 px-6 font-medium text-slate-800">${form.item_name || '품목명 없음'}</td>
                 <td class="py-3.5 px-6 text-slate-600 text-xs">${dateStr}</td>
                 <td class="py-3.5 px-6 text-slate-500 text-xs" title="${form.author_email || ''}">
-                    <i class="fas fa-user-circle mr-1 text-slate-400"></i>${authorStr}
+                    <i class="fas fa-user-circle mr-1 text-slate-400"></i>${authorStr} ${isAuthor ? '<span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded ml-1">내 작성글</span>' : ''}
                 </td>
                 <td class="py-3.5 px-6 text-center">
                     <span class="inline-flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-full ${isPmSigned ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}">
@@ -173,10 +173,10 @@ function renderGroupedList(searchQuery = '') {
                 </td>
                 <td class="py-3.5 px-6 text-center">
                     <div class="flex items-center justify-center gap-2">
-                        <button class="btn-open-form px-3 py-1 bg-white border border-slate-300 text-slate-700 rounded text-xs font-semibold hover:bg-slate-50 hover:border-blue-400 hover:text-blue-600 transition shadow-sm" title="확인서 조회 및 편집">
-                            <i class="fas fa-edit mr-1"></i>조회/수정
+                        <button class="btn-open-form px-3 py-1 bg-white border border-slate-300 text-slate-700 rounded text-xs font-semibold hover:bg-slate-50 hover:border-blue-400 hover:text-blue-600 transition shadow-sm" title="${canManage ? '수정 및 열람' : '조회 전용'}">
+                            <i class="fas ${canManage ? 'fa-edit' : 'fa-eye'} mr-1"></i>${canManage ? '수정/열람' : '조회'}
                         </button>
-                        ${isAuthorOrAdmin ? `
+                        ${canManage ? `
                             <button class="btn-delete-row px-2.5 py-1 text-red-500 hover:bg-red-50 hover:text-red-700 rounded text-xs font-semibold transition" title="확인서 삭제">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
@@ -220,6 +220,15 @@ function renderGroupedList(searchQuery = '') {
 
 // 설명: 대시보드 목록에서 즉시 삭제 처리
 async function deleteFormFromDashboard(formId, itemName) {
+    const targetForm = allForms.find(f => f.id === formId);
+    const isAuthor = currentUserProfile && targetForm && targetForm.created_by && (targetForm.created_by === currentUserProfile.id);
+    const isAdmin = currentUserProfile && (currentUserProfile.role === 'ADMIN');
+
+    if (!isAdmin && !isAuthor) {
+        alert('삭제 권한이 없습니다.\n관리자(ADMIN) 또는 본인이 작성한 확인서만 삭제할 수 있습니다.');
+        return;
+    }
+
     if (!confirm(`'${itemName}' 확인서를 정말로 삭제하시겠습니까?\n삭제된 문서는 복구할 수 없습니다.`)) {
         return;
     }
