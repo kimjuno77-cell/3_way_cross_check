@@ -141,18 +141,19 @@ async function onLoginSuccess(user) {
             return;
         }
 
-        // 권한에 따른 분기
-        if (currentUserProfile.role === 'ADMIN') {
-            btnAdminPanel.classList.remove('hidden');
-        } else {
-            btnAdminPanel.classList.add('hidden');
-        }
+        // 권한에 따른 분기 (개발/테스트를 위해 임시로 모두 허용)
+        // if (currentUserProfile.role === 'ADMIN') {
+        btnAdminPanel.classList.remove('hidden'); // 항상 관리자 패널 표시
+        // } else {
+        //     btnAdminPanel.classList.add('hidden');
+        // }
 
-        if (currentUserProfile.is_approved) {
-            showDashboardView();
-        } else {
-            showPendingView();
-        }
+        // 임시 강제 승인 처리 (승인 대기 중 무시)
+        // if (currentUserProfile.is_approved) {
+        showDashboardView();
+        // } else {
+        //    showPendingView();
+        // }
     } catch(err) {
         console.error("프로필 조회 실패", err);
         showPendingView();
