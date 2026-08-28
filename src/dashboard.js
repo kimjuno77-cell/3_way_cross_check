@@ -4,7 +4,9 @@ import { currentUserProfile } from './app.js';
 let onNewFormCallback = null;
 const projectListEl = document.getElementById('project-list');
 const searchInput = document.getElementById('search-input');
+const btnToggleAll = document.getElementById('btn-toggle-all-groups');
 let allForms = [];
+let isAllCollapsed = false;
 
 export function setupDashboard(showFormViewCb) {
     onNewFormCallback = showFormViewCb;
@@ -20,6 +22,39 @@ export function setupDashboard(showFormViewCb) {
         searchInput.addEventListener('input', (e) => {
             renderGroupedList(e.target.value);
         });
+    }
+
+    if (btnToggleAll) {
+        btnToggleAll.addEventListener('click', () => {
+            isAllCollapsed = !isAllCollapsed;
+            toggleAllProjectGroups(isAllCollapsed);
+        });
+    }
+}
+
+// 설명: 전체 프로젝트 그룹을 일괄 접기/펼치기
+function toggleAllProjectGroups(collapse) {
+    const tableContainers = document.querySelectorAll('.project-group-table-container');
+    const chevrons = document.querySelectorAll('.project-group-chevron');
+
+    tableContainers.forEach(container => {
+        if (collapse) {
+            container.classList.add('hidden');
+        } else {
+            container.classList.remove('hidden');
+        }
+    });
+
+    chevrons.forEach(chevron => {
+        if (collapse) {
+            chevron.style.transform = 'rotate(-90deg)';
+        } else {
+            chevron.style.transform = 'rotate(0deg)';
+        }
+    });
+
+    if (btnToggleAll) {
+        btnToggleAll.querySelector('span').textContent = collapse ? '전체 펼치기' : '전체 접기';
     }
 }
 
@@ -54,7 +89,7 @@ export async function loadDashboard() {
     }
 }
 
-// 설명: 프로젝트별로 확인서를 그룹화하여 렌더링
+// 설명: 프로젝트별로 확인서를 그룹화하여 아코디언(접기/펼치기) 렌더링
 function renderGroupedList(searchQuery = '') {
     if (!projectListEl) return;
     projectListEl.innerHTML = '';
@@ -95,36 +130,42 @@ function renderGroupedList(searchQuery = '') {
     // 프로젝트 그룹별로 UI 카드 생성
     groupedMap.forEach((forms, projectName) => {
         const groupCard = document.createElement('div');
-        groupCard.className = 'col-span-full bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-2';
+        groupCard.className = 'col-span-full bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-3 transition-shadow hover:shadow-md';
 
         const totalCount = forms.length;
         const signedCount = forms.filter(f => !!f.pm_sign_user_id).length;
 
-        // 프로젝트 헤더
+        // 프로젝트 헤더 (클릭 시 접기/펼치기)
         const headerEl = document.createElement('div');
-        headerEl.className = 'bg-slate-50 border-b border-slate-200 px-6 py-4 flex flex-wrap justify-between items-center gap-3';
+        headerEl.className = 'bg-slate-50/90 hover:bg-slate-100/90 border-b border-slate-200 px-6 py-4 flex flex-wrap justify-between items-center gap-3 cursor-pointer select-none transition-colors';
         headerEl.innerHTML = `
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-lg">
+                <div class="w-10 h-10 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-lg shrink-0">
                     <i class="fas fa-project-diagram"></i>
                 </div>
                 <div>
-                    <h3 class="font-bold text-lg text-slate-900">${projectName}</h3>
+                    <div class="flex items-center gap-2">
+                        <h3 class="font-bold text-lg text-slate-900">${projectName}</h3>
+                        <span class="text-xs bg-slate-200 text-slate-700 font-bold px-2 py-0.5 rounded-full">${totalCount}건</span>
+                    </div>
                     <p class="text-xs text-slate-500 mt-0.5">
-                        총 <span class="font-bold text-blue-600">${totalCount}</span>건의 확인서 등록됨 (최종 승인 완료: <span class="font-bold text-green-600">${signedCount}</span>건)
+                        최종 출하 승인 완료: <span class="font-bold ${signedCount === totalCount ? 'text-green-600' : 'text-blue-600'}">${signedCount} / ${totalCount}건</span>
                     </p>
                 </div>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-3">
                 <span class="text-xs font-semibold px-2.5 py-1 rounded-full ${signedCount === totalCount ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">
-                    ${signedCount === totalCount ? '✓ 전체 출하 승인완료' : `진행 중 (${signedCount}/${totalCount})`}
+                    ${signedCount === totalCount ? '✓ 전체 승인완료' : `검증 진행 중`}
                 </span>
+                <div class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 shadow-2xs">
+                    <i class="fas fa-chevron-down project-group-chevron transition-transform duration-200"></i>
+                </div>
             </div>
         `;
 
-        // 확인서 리스트 테이블
+        // 확인서 리스트 테이블 컨테이너
         const tableContainer = document.createElement('div');
-        tableContainer.className = 'overflow-x-auto';
+        tableContainer.className = 'project-group-table-container overflow-x-auto transition-all duration-200';
 
         const tableEl = document.createElement('table');
         tableEl.className = 'w-full text-left text-sm';
@@ -146,7 +187,7 @@ function renderGroupedList(searchQuery = '') {
 
         forms.forEach(form => {
             const tr = document.createElement('tr');
-            tr.className = 'hover:bg-blue-50/40 transition-colors group';
+            tr.className = 'hover:bg-blue-50/40 transition-colors group cursor-pointer';
 
             const isPmSigned = !!form.pm_sign_user_id;
             const dateStr = form.inspection_date ? form.inspection_date : '<span class="text-slate-400">미지정</span>';
@@ -212,6 +253,16 @@ function renderGroupedList(searchQuery = '') {
         });
 
         tableContainer.appendChild(tableEl);
+
+        // 헤더 클릭 시 개별 아코디언 토글 (접기/펼치기)
+        const chevronIcon = headerEl.querySelector('.project-group-chevron');
+        headerEl.addEventListener('click', () => {
+            const isHidden = tableContainer.classList.toggle('hidden');
+            if (chevronIcon) {
+                chevronIcon.style.transform = isHidden ? 'rotate(-90deg)' : 'rotate(0deg)';
+            }
+        });
+
         groupCard.appendChild(headerEl);
         groupCard.appendChild(tableContainer);
         projectListEl.appendChild(groupCard);
