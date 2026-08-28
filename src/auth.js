@@ -11,54 +11,100 @@ export function setupAuth(onSuccess, onLogout) {
     const emailInput = document.getElementById('auth-email');
     const passwordInput = document.getElementById('auth-password');
     const msgEl = document.getElementById('auth-msg');
-    const btnSignup = document.getElementById('btn-signup');
+    const btnOpenSignup = document.getElementById('btn-open-signup');
+    const signupModal = document.getElementById('signup-modal');
+    const signupForm = document.getElementById('signup-form');
+    const btnSignupCancel = document.getElementById('btn-signup-cancel');
+    const signupEmail = document.getElementById('signup-email');
+    const signupPassword = document.getElementById('signup-password');
+    const signupPasswordConfirm = document.getElementById('signup-password-confirm');
+    const signupMsg = document.getElementById('signup-msg');
     const btnLogout = document.getElementById('btn-logout');
 
     // 로그인
-    authForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        msgEl.textContent = '로그인 중...';
-        
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email: emailInput.value,
-            password: passwordInput.value,
-        });
-
-        if (error) {
-            msgEl.textContent = '로그인 실패: ' + error.message;
-        } else {
-            msgEl.textContent = '';
-            emailInput.value = '';
-            passwordInput.value = '';
-            if (onSuccessCallback) onSuccessCallback(data.user);
-        }
-    });
-
-    // 회원가입
-    btnSignup.addEventListener('click', async () => {
-        if (!emailInput.value || !passwordInput.value) {
-            msgEl.textContent = '이메일과 비밀번호를 입력해주세요.';
-            return;
-        }
-        msgEl.textContent = '회원가입 처리 중...';
-
-        const { data, error } = await supabase.auth.signUp({
-            email: emailInput.value,
-            password: passwordInput.value,
-        });
-
-        if (error) {
-            msgEl.textContent = '가입 실패: ' + error.message;
-        } else {
-            // 이메일 확인이 비활성화되어 있다면 즉시 로그인 처리될 수 있음
-            msgEl.className = 'text-sm text-center mt-2 text-green-600';
-            msgEl.textContent = '가입이 완료되었습니다. (또는 이메일을 확인해주세요)';
+    if (authForm) {
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            msgEl.textContent = '로그인 중...';
             
-            if (data.session) {
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: emailInput.value,
+                password: passwordInput.value,
+            });
+
+            if (error) {
+                msgEl.textContent = '로그인 실패: ' + error.message;
+            } else {
+                msgEl.textContent = '';
+                emailInput.value = '';
+                passwordInput.value = '';
                 if (onSuccessCallback) onSuccessCallback(data.user);
             }
-        }
-    });
+        });
+    }
+
+    // 회원가입 모달 열기
+    if (btnOpenSignup && signupModal) {
+        btnOpenSignup.addEventListener('click', () => {
+            signupModal.classList.remove('hidden');
+            signupMsg.textContent = '';
+            signupEmail.value = '';
+            signupPassword.value = '';
+            signupPasswordConfirm.value = '';
+        });
+    }
+
+    // 회원가입 모달 닫기
+    if (btnSignupCancel && signupModal) {
+        btnSignupCancel.addEventListener('click', () => {
+            signupModal.classList.add('hidden');
+        });
+    }
+
+    // 회원가입 폼 제출
+    if (signupForm) {
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (signupPassword.value !== signupPasswordConfirm.value) {
+                signupMsg.className = 'text-xs text-red-500';
+                signupMsg.textContent = '비밀번호가 일치하지 않습니다.';
+                return;
+            }
+            if (signupPassword.value.length < 6) {
+                signupMsg.className = 'text-xs text-red-500';
+                signupMsg.textContent = '비밀번호는 최소 6자 이상이어야 합니다.';
+                return;
+            }
+
+            signupMsg.className = 'text-xs text-blue-600';
+            signupMsg.textContent = '회원가입 처리 중...';
+
+            const { data, error } = await supabase.auth.signUp({
+                email: signupEmail.value,
+                password: signupPassword.value,
+            });
+
+            if (error) {
+                signupMsg.className = 'text-xs text-red-500';
+                signupMsg.textContent = '가입 실패: ' + error.message;
+            } else {
+                signupMsg.className = 'text-xs text-green-600';
+                signupMsg.textContent = '가입이 완료되었습니다! 잠시 후 로그인 처리됩니다.';
+                
+                // 가입 성공 후 약간 대기 후 로그인 처리 및 모달 닫기
+                setTimeout(() => {
+                    signupModal.classList.add('hidden');
+                    if (data.session && onSuccessCallback) {
+                        onSuccessCallback(data.user);
+                    } else {
+                        // 세션이 바로 생성되지 않는 설정일 경우(이메일 인증 등)
+                        alert('가입이 완료되었습니다. 승인 또는 이메일 확인 후 이용 가능합니다.');
+                    }
+                }, 1500);
+            }
+        });
+    }
 
     // 로그아웃
     if (btnLogout) {
