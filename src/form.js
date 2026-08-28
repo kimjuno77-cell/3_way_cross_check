@@ -205,19 +205,24 @@ function resetSignUI(statusId, btnId) {
     const stEl = document.getElementById(statusId);
     const btEl = document.getElementById(btnId);
     if (stEl) {
-        stEl.textContent = '대기 중';
+        stEl.innerHTML = '<span class="text-slate-400">대기 중</span>';
         stEl.className = 'text-xs text-slate-400';
     }
     if (btEl) btEl.classList.remove('hidden');
 }
 
-function setSignUI(statusId, btnId, isSigned) {
+function setSignUI(statusId, btnId, isSigned, signerName = '', signedAt = null) {
     const stEl = document.getElementById(statusId);
     const btEl = document.getElementById(btnId);
     if (isSigned) {
+        const dateStr = signedAt ? new Date(signedAt).toLocaleDateString() : '';
+        const nameText = signerName ? signerName : '서명 완료';
         if (stEl) {
-            stEl.textContent = '서명 완료';
-            stEl.className = 'text-xs font-bold text-blue-600';
+            stEl.innerHTML = `
+                <div class="font-bold text-slate-900 text-sm tracking-wider">${nameText}</div>
+                <div class="text-[10px] text-blue-600 font-semibold mt-0.5">✓ 서명완료 ${dateStr ? `(${dateStr})` : ''}</div>
+            `;
+            stEl.className = 'text-center py-1';
         }
         if (btEl) btEl.classList.add('hidden');
     } else {
@@ -263,7 +268,8 @@ export async function loadFormContent(formId) {
             authorInfoEl.innerHTML = `<i class="fas fa-user-edit mr-1"></i>작성자: <span class="text-slate-600 font-semibold">${authorName}</span> (${createdDate})`;
         }
 
-        setSignUI('sign-pm-status', 'btn-sign-pm', !!form.pm_sign_user_id);
+        // 서명 데이터 바인딩
+        setSignUI('sign-pm-status', 'btn-sign-pm', !!form.pm_sign_user_id, form.pm_signer_name, form.pm_signed_at);
 
         if (form.form_steps) {
             form.form_steps.forEach(step => {
@@ -287,8 +293,8 @@ export async function loadFormContent(formId) {
                     if (radio) radio.checked = true;
                 }
 
-                // 서명 바인딩
-                setSignUI(`sign${sNum}-status`, `btn-sign${sNum}`, !!step.manager_sign_user_id);
+                // 서명 바인딩 (서명자 성명 및 일시 전달)
+                setSignUI(`sign${sNum}-status`, `btn-sign${sNum}`, !!step.manager_sign_user_id, step.manager_signer_name, step.manager_signed_at);
 
                 // 체크리스트 바인딩
                 if (step.step_checklist_items && step.step_checklist_items.length > 0) {
@@ -534,22 +540,54 @@ async function handleSignOff(btnId) {
         return;
     }
 
+    // 단계별 명칭 안내
+    const stepTitleMap = {
+        'btn-sign1': '1단계 (설계 담당자)',
+        'btn-sign2': '2단계 (구매 담당자)',
+        'btn-sign3': '3단계 (물류 담당자)',
+        'btn-sign-pm': '최종 출하 승인 (PM / 부서장)'
+    };
+    const stepTitle = stepTitleMap[btnId] || '서명';
+
+    // 서명할 이름 또는 이니셜 입력 받기
+    const defaultSignerName = (currentUserProfile && currentUserProfile.email) 
+        ? currentUserProfile.email.split('@')[0] 
+        : '';
+    const signerInput = prompt(`[${stepTitle}] 서명을 진행합니다.\n서명란에 기재할 성명 또는 이니셜을 입력하세요:`, defaultSignerName);
+
+    if (signerInput === null) {
+        // 취소 누름
+        return;
+    }
+
+    const signerName = signerInput.trim() || defaultSignerName || '서명자';
+    const nowIso = new Date().toISOString();
+
     try {
         if (btnId === 'btn-sign-pm') {
-            await supabase.from('cross_check_forms').update({ pm_sign_user_id: user.id }).eq('id', formId);
-            setSignUI('sign-pm-status', 'btn-sign-pm', true);
+            await supabase.from('cross_check_forms').update({ 
+                pm_sign_user_id: user.id,
+                pm_signer_name: signerName,
+                pm_signed_at: nowIso
+            }).eq('id', formId);
+
+            setSignUI('sign-pm-status', 'btn-sign-pm', true, signerName, nowIso);
         } else {
             const stepMap = { 'btn-sign1': 1, 'btn-sign2': 2, 'btn-sign3': 3 };
             const stepNum = stepMap[btnId];
             
             await supabase.from('form_steps')
-                .update({ manager_sign_user_id: user.id })
+                .update({ 
+                    manager_sign_user_id: user.id,
+                    manager_signer_name: signerName,
+                    manager_signed_at: nowIso
+                })
                 .eq('form_id', formId)
                 .eq('step_number', stepNum);
                 
-            setSignUI(`sign${stepNum}-status`, btnId, true);
+            setSignUI(`sign${stepNum}-status`, btnId, true, signerName, nowIso);
         }
-        alert("서명이 완료되었습니다.");
+        alert(`'${signerName}' 님의 서명이 성공적으로 등록되었습니다.`);
     } catch (err) {
         console.error("서명 오류:", err);
         alert("서명 처리 중 오류가 발생했습니다: " + err.message);
