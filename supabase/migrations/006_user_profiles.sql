@@ -9,33 +9,38 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 2. RLS 정책 설정
+-- 2. 관리자 권한 확인 함수 (SECURITY DEFINER로 RLS 무한 재귀 방지)
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.user_profiles
+    WHERE id = auth.uid() AND role = 'ADMIN'
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- RLS 정책 설정
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view own profile" ON public.user_profiles;
+DROP POLICY IF EXISTS "Admins can view all profiles" ON public.user_profiles;
+DROP POLICY IF EXISTS "Admins can update profiles" ON public.user_profiles;
 
 -- 누구나 자신의 프로필은 읽을 수 있음
 CREATE POLICY "Users can view own profile" 
 ON public.user_profiles FOR SELECT 
 USING (auth.uid() = id);
 
--- ADMIN 역할인 사용자만 모든 프로필을 읽을 수 있음
+-- ADMIN 역할인 사용자는 모든 프로필을 읽을 수 있음 (is_admin 함수 사용)
 CREATE POLICY "Admins can view all profiles" 
 ON public.user_profiles FOR SELECT 
-USING (
-    EXISTS (
-        SELECT 1 FROM public.user_profiles 
-        WHERE id = auth.uid() AND role = 'ADMIN'
-    )
-);
+USING (public.is_admin());
 
--- ADMIN 역할인 사용자만 승인 상태를 업데이트할 수 있음
+-- ADMIN 역할인 사용자는 프로필을 업데이트할 수 있음
 CREATE POLICY "Admins can update profiles" 
 ON public.user_profiles FOR UPDATE 
-USING (
-    EXISTS (
-        SELECT 1 FROM public.user_profiles 
-        WHERE id = auth.uid() AND role = 'ADMIN'
-    )
-);
+USING (public.is_admin());
 
 -- 3. 회원가입 시 자동 삽입 트리거 함수 (Trigger Function)
 CREATE OR REPLACE FUNCTION public.handle_new_user() 
