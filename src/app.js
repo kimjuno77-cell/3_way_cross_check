@@ -114,12 +114,18 @@ async function showFormView(formId = null) {
     }
 }
 
+// 설명: 관리자 이메일 목록 (이 이메일로 로그인하면 DB 상태와 무관하게 항상 ADMIN 권한)
+const ADMIN_EMAILS = ['yjkim@emko.co.kr'];
+
 // 인증 콜백
 async function onLoginSuccess(user) {
     userEmailDisplay.textContent = user.email;
     
+    // 설명: 로그인한 이메일이 관리자 이메일 목록에 포함되는지 확인
+    const isHardcodedAdmin = ADMIN_EMAILS.includes(user.email.toLowerCase());
+
     try {
-        // 프로필 정보 조회
+        // 설명: user_profiles 테이블에서 프로필 정보 조회 시도
         const { data, error } = await supabase
             .from('user_profiles')
             .select('*')
@@ -127,35 +133,46 @@ async function onLoginSuccess(user) {
             .single();
             
         if (error) {
-            // 회원가입 직후(트리거 실행 타이밍) 조회가 안 될 수 있으므로, 약간 대기 후 재조회
+            // 설명: 최초 조회 실패 시 1초 대기 후 재시도 (회원가입 직후 트리거 지연 대비)
             await new Promise(r => setTimeout(r, 1000));
             const { data: retryData } = await supabase.from('user_profiles').select('*').eq('id', user.id).single();
             currentUserProfile = retryData;
         } else {
             currentUserProfile = data;
         }
-
-        if (!currentUserProfile) {
-            // 트리거 실패나 오류 상황
-            showPendingView();
-            return;
-        }
-
-        // 권한에 따른 분기 (개발/테스트를 위해 임시로 모두 허용)
-        // if (currentUserProfile.role === 'ADMIN') {
-        btnAdminPanel.classList.remove('hidden'); // 항상 관리자 패널 표시
-        // } else {
-        //     btnAdminPanel.classList.add('hidden');
-        // }
-
-        // 임시 강제 승인 처리 (승인 대기 중 무시)
-        // if (currentUserProfile.is_approved) {
-        showDashboardView();
-        // } else {
-        //    showPendingView();
-        // }
     } catch(err) {
-        console.error("프로필 조회 실패", err);
+        // 설명: DB 조회 중 예외 발생 시 로그만 남기고 계속 진행
+        console.error("프로필 조회 실패 (무시하고 계속 진행)", err);
+        currentUserProfile = null;
+    }
+
+    // 설명: 프로필이 없거나 조회 실패해도, 하드코딩된 관리자 이메일이면 강제로 프로필 생성
+    if (!currentUserProfile) {
+        currentUserProfile = {
+            id: user.id,
+            email: user.email,
+            role: isHardcodedAdmin ? 'ADMIN' : 'USER',
+            is_approved: isHardcodedAdmin ? true : false,
+        };
+    }
+
+    // 설명: 하드코딩된 관리자 이메일이면 DB 값과 무관하게 ADMIN + 승인 강제 적용
+    if (isHardcodedAdmin) {
+        currentUserProfile.role = 'ADMIN';
+        currentUserProfile.is_approved = true;
+    }
+
+    // 설명: 권한에 따른 화면 분기
+    if (currentUserProfile.role === 'ADMIN') {
+        btnAdminPanel.classList.remove('hidden');
+    } else {
+        btnAdminPanel.classList.add('hidden');
+    }
+
+    // 설명: 승인 상태에 따라 대시보드 또는 대기 화면으로 분기
+    if (currentUserProfile.is_approved) {
+        showDashboardView();
+    } else {
         showPendingView();
     }
 }
