@@ -1,67 +1,7 @@
 import { supabase } from './supabase.js';
+import { currentUserProfile } from './app.js';
 
 let backToDashCallback = null;
-
-export function setupForm(backCb) {
-    backToDashCallback = backCb;
-
-    const btnBack = document.getElementById('btn-back-dashboard');
-    if (btnBack) {
-        btnBack.addEventListener('click', () => {
-            if (backToDashCallback) backToDashCallback();
-        });
-    }
-
-    const btnSave = document.getElementById('btn-save');
-    if (btnSave) {
-        btnSave.addEventListener('click', saveFormData);
-    }
-    
-    // 서명 버튼들
-    const signBtns = ['btn-sign1', 'btn-sign2', 'btn-sign3', 'btn-sign-pm'];
-    signBtns.forEach(id => {
-        const btn = document.getElementById(id);
-        if (btn) {
-            btn.addEventListener('click', async (e) => {
-                e.preventDefault();
-                await handleSignOff(id);
-            });
-        }
-    });
-
-    // 기존의 항목 추가 이벤트 리스너 (위임)
-    document.querySelectorAll('.btn-add').forEach(btn => {
-        // 기존 리스너가 중복되지 않도록 주의해야하지만 현재 아키텍처상 1회 실행됨
-        btn.addEventListener('click', () => {
-            const listId = btn.getAttribute('data-list');
-            const ul = document.getElementById(listId);
-            const li = document.createElement('li');
-            li.className = "flex items-start group relative mb-2 opacity-0 transition-opacity duration-300";
-            li.innerHTML = `
-                <input type="checkbox" class="e-checkbox mr-2">
-                <input type="text" placeholder="새로운 체크 항목을 입력하세요" class="list-input flex-1">
-                <button type="button" class="btn-remove no-print opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 ml-2 py-1 px-2 rounded hover:bg-red-50 transition-all" title="항목 삭제">
-                    <i class="fas fa-times"></i>
-                </button>
-            `;
-            ul.appendChild(li);
-            setTimeout(() => li.classList.remove('opacity-0'), 10);
-            li.querySelector('input[type="text"]').focus();
-        });
-    });
-
-    // 항목 삭제 (위임)
-    document.getElementById('form-view').addEventListener('click', (e) => {
-        const removeBtn = e.target.closest('.btn-remove');
-        if (removeBtn) {
-            const li = removeBtn.closest('li');
-            if (li) {
-                li.style.opacity = '0';
-                setTimeout(() => li.remove(), 200);
-            }
-        }
-    });
-}
 
 // 설명: 새 문서 작성 시 각 단계별로 기본 표시되는 체크리스트 항목 목록
 const DEFAULT_CHECKLIST = {
@@ -82,9 +22,79 @@ const DEFAULT_CHECKLIST = {
     ],
 };
 
+// 설명: 폼 초기화 및 이벤트 리스너 등록
+export function setupForm(backCb) {
+    backToDashCallback = backCb;
+
+    const btnBack = document.getElementById('btn-back-dashboard');
+    if (btnBack) {
+        btnBack.addEventListener('click', () => {
+            if (backToDashCallback) backToDashCallback();
+        });
+    }
+
+    const btnSave = document.getElementById('btn-save');
+    if (btnSave) {
+        btnSave.addEventListener('click', saveFormData);
+    }
+
+    const btnDelete = document.getElementById('btn-delete-form');
+    if (btnDelete) {
+        btnDelete.addEventListener('click', deleteCurrentForm);
+    }
+    
+    // 서명 버튼들
+    const signBtns = ['btn-sign1', 'btn-sign2', 'btn-sign3', 'btn-sign-pm'];
+    signBtns.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await handleSignOff(id);
+            });
+        }
+    });
+
+    // 항목 추가 이벤트 리스너
+    document.querySelectorAll('.btn-add').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const listId = btn.getAttribute('data-list');
+            const ul = document.getElementById(listId);
+            const li = document.createElement('li');
+            li.className = "flex items-start group relative mb-2 opacity-0 transition-opacity duration-300";
+            li.innerHTML = `
+                <input type="checkbox" class="e-checkbox mr-2">
+                <input type="text" placeholder="새로운 체크 항목을 입력하세요" class="list-input flex-1">
+                <button type="button" class="btn-remove no-print opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 ml-2 py-1 px-2 rounded hover:bg-red-50 transition-all" title="항목 삭제">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            ul.appendChild(li);
+            setTimeout(() => li.classList.remove('opacity-0'), 10);
+            li.querySelector('input[type="text"]').focus();
+        });
+    });
+
+    // 항목 삭제 (위임)
+    const formView = document.getElementById('form-view');
+    if (formView) {
+        formView.addEventListener('click', (e) => {
+            const removeBtn = e.target.closest('.btn-remove');
+            if (removeBtn) {
+                const li = removeBtn.closest('li');
+                if (li) {
+                    li.style.opacity = '0';
+                    setTimeout(() => li.remove(), 200);
+                }
+            }
+        });
+    }
+}
+
 // 설명: 특정 리스트에 체크리스트 항목 배열을 렌더링하는 헬퍼 함수
 function renderChecklistItems(listId, items) {
     const ul = document.getElementById(listId);
+    if (!ul) return;
     items.forEach(text => {
         const li = document.createElement('li');
         li.className = "flex items-start group relative mb-2";
@@ -99,7 +109,51 @@ function renderChecklistItems(listId, items) {
     });
 }
 
-// 빈 폼으로 초기화
+// 설명: 현재 로그인한 사용자가 해당 문서를 수정/삭제할 수 있는지 검사
+export function checkCanEdit(form) {
+    if (!currentUserProfile) return false;
+    // 관리자(ADMIN)는 모든 문서 수정/삭제 가능
+    if (currentUserProfile.role === 'ADMIN') return true;
+    // 신규 작성 문서(ID 없음)는 누구나 작성/수정 가능
+    if (!form || !form.id) return true;
+    // 본인이 작성한 문서인 경우
+    if (form.created_by && form.created_by === currentUserProfile.id) return true;
+    // 기존에 작성자 정보가 없는 문서의 경우
+    if (!form.created_by) return true;
+    return false;
+}
+
+// 설명: 읽기 전용 모드 또는 편집 모드로 폼 UI 전환
+function setFormReadOnlyMode(isReadOnly) {
+    const readonlyBadge = document.getElementById('form-readonly-badge');
+    const btnSave = document.getElementById('btn-save');
+    const btnDelete = document.getElementById('btn-delete-form');
+
+    if (isReadOnly) {
+        if (readonlyBadge) readonlyBadge.classList.remove('hidden');
+        if (btnSave) btnSave.classList.add('hidden');
+        if (btnDelete) btnDelete.classList.add('hidden');
+
+        // 입력창 비활성화
+        document.querySelectorAll('#form-view input').forEach(el => el.disabled = true);
+        document.querySelectorAll('.btn-add, .btn-remove').forEach(el => el.classList.add('hidden'));
+    } else {
+        if (readonlyBadge) readonlyBadge.classList.add('hidden');
+        if (btnSave) btnSave.classList.remove('hidden');
+
+        const formId = document.getElementById('current_form_id').value;
+        if (btnDelete) {
+            if (formId) btnDelete.classList.remove('hidden');
+            else btnDelete.classList.add('hidden');
+        }
+
+        // 입력창 활성화
+        document.querySelectorAll('#form-view input').forEach(el => el.disabled = false);
+        document.querySelectorAll('.btn-add').forEach(el => el.classList.remove('hidden'));
+    }
+}
+
+// 빈 폼으로 초기화 (신규 작성)
 export function clearFormContent() {
     document.getElementById('current_form_id').value = '';
     document.getElementById('current_project_id').value = '';
@@ -109,45 +163,63 @@ export function clearFormContent() {
     document.getElementById('item_name').value = '';
     document.getElementById('inspection_date').value = '';
 
-    // 설명: 기존 리스트 초기화 후 기본 항목 삽입
+    const authorInfoEl = document.getElementById('form-author-info');
+    if (authorInfoEl) authorInfoEl.textContent = '';
+
+    // 기존 리스트 초기화 후 기본 업무 항목 삽입
     ['step1-list', 'step2-list', 'step3-list'].forEach(id => {
-        document.getElementById(id).innerHTML = '';
+        const ul = document.getElementById(id);
+        if (ul) ul.innerHTML = '';
         if (DEFAULT_CHECKLIST[id]) {
             renderChecklistItems(id, DEFAULT_CHECKLIST[id]);
         }
     });
     
     ['step1_doc_no', 'step1_doc_rev', 'step2_doc_no', 'step3_doc_no'].forEach(id => {
-        if(document.getElementById(id)) document.getElementById(id).value = '';
+        const el = document.getElementById(id);
+        if (el) el.value = '';
     });
 
     ['step2_evidence', 'step3_evidence'].forEach(id => {
-        if(document.getElementById(id)) document.getElementById(id).checked = false;
+        const el = document.getElementById(id);
+        if (el) el.checked = false;
     });
 
     document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
     document.querySelectorAll('.ev-chk').forEach(c => c.checked = false);
     
-    if(document.getElementById('ev_other_chk')) document.getElementById('ev_other_chk').checked = false;
-    if(document.getElementById('ev_other_text')) document.getElementById('ev_other_text').value = '';
+    if (document.getElementById('ev_other_chk')) document.getElementById('ev_other_chk').checked = false;
+    if (document.getElementById('ev_other_text')) document.getElementById('ev_other_text').value = '';
 
     // 서명란 초기화
     resetSignUI('sign1-status', 'btn-sign1');
     resetSignUI('sign2-status', 'btn-sign2');
     resetSignUI('sign3-status', 'btn-sign3');
     resetSignUI('sign-pm-status', 'btn-sign-pm');
+
+    // 편집 모드로 설정
+    setFormReadOnlyMode(false);
 }
 
 function resetSignUI(statusId, btnId) {
-    document.getElementById(statusId).textContent = '대기 중';
-    document.getElementById(statusId).className = 'text-xs text-slate-400';
-    document.getElementById(btnId).classList.remove('hidden');
+    const stEl = document.getElementById(statusId);
+    const btEl = document.getElementById(btnId);
+    if (stEl) {
+        stEl.textContent = '대기 중';
+        stEl.className = 'text-xs text-slate-400';
+    }
+    if (btEl) btEl.classList.remove('hidden');
 }
+
 function setSignUI(statusId, btnId, isSigned) {
+    const stEl = document.getElementById(statusId);
+    const btEl = document.getElementById(btnId);
     if (isSigned) {
-        document.getElementById(statusId).textContent = '서명 완료';
-        document.getElementById(statusId).className = 'text-xs font-bold text-blue-600';
-        document.getElementById(btnId).classList.add('hidden');
+        if (stEl) {
+            stEl.textContent = '서명 완료';
+            stEl.className = 'text-xs font-bold text-blue-600';
+        }
+        if (btEl) btEl.classList.add('hidden');
     } else {
         resetSignUI(statusId, btnId);
     }
@@ -183,6 +255,14 @@ export async function loadFormContent(formId) {
         document.getElementById('item_name').value = form.item_name || '';
         document.getElementById('inspection_date').value = form.inspection_date || '';
 
+        // 작성자 정보 표시
+        const authorInfoEl = document.getElementById('form-author-info');
+        if (authorInfoEl) {
+            const authorName = form.author_email || '미지정';
+            const createdDate = new Date(form.created_at).toLocaleDateString();
+            authorInfoEl.innerHTML = `<i class="fas fa-user-edit mr-1"></i>작성자: <span class="text-slate-600 font-semibold">${authorName}</span> (${createdDate})`;
+        }
+
         setSignUI('sign-pm-status', 'btn-sign-pm', !!form.pm_sign_user_id);
 
         if (form.form_steps) {
@@ -213,19 +293,21 @@ export async function loadFormContent(formId) {
                 // 체크리스트 바인딩
                 if (step.step_checklist_items && step.step_checklist_items.length > 0) {
                     const ul = document.getElementById(`step${sNum}-list`);
-                    // sort by sort_order
-                    step.step_checklist_items.sort((a,b) => a.sort_order - b.sort_order).forEach(chk => {
-                        const li = document.createElement('li');
-                        li.className = "flex items-start group relative mb-2";
-                        li.innerHTML = `
-                            <input type="checkbox" class="e-checkbox mr-2" ${chk.is_checked ? 'checked' : ''}>
-                            <input type="text" value="${chk.content || ''}" class="list-input flex-1">
-                            <button type="button" class="btn-remove no-print opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 ml-2 py-1 px-2 rounded hover:bg-red-50 transition-all" title="항목 삭제">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        `;
-                        ul.appendChild(li);
-                    });
+                    if (ul) {
+                        ul.innerHTML = '';
+                        step.step_checklist_items.sort((a,b) => a.sort_order - b.sort_order).forEach(chk => {
+                            const li = document.createElement('li');
+                            li.className = "flex items-start group relative mb-2";
+                            li.innerHTML = `
+                                <input type="checkbox" class="e-checkbox mr-2" ${chk.is_checked ? 'checked' : ''}>
+                                <input type="text" value="${chk.content || ''}" class="list-input flex-1">
+                                <button type="button" class="btn-remove no-print opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 ml-2 py-1 px-2 rounded hover:bg-red-50 transition-all" title="항목 삭제">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            `;
+                            ul.appendChild(li);
+                        });
+                    }
                 }
             });
         }
@@ -243,12 +325,16 @@ export async function loadFormContent(formId) {
                 }
             });
         }
+
+        // 권한 검사: 관리자이거나 본인 작성글이 아니면 읽기 전용
+        const canEdit = checkCanEdit(form);
+        setFormReadOnlyMode(!canEdit);
+
     } catch (err) {
         console.error("데이터 로드 오류:", err);
-        alert("데이터 로드 중 오류가 발생했습니다.");
+        alert("데이터 로드 중 오류가 발생했습니다: " + err.message);
     }
 }
-
 
 // ---------------------------------------------------
 // 폼 데이터 저장 (INSERT/UPSERT)
@@ -260,7 +346,7 @@ async function saveFormData() {
         return;
     }
 
-    const projectName = document.getElementById('project_name').value;
+    const projectName = document.getElementById('project_name').value.trim();
     if (!projectName) {
         alert("프로젝트명을 입력해 주세요.");
         return;
@@ -270,30 +356,43 @@ async function saveFormData() {
     let projectId = document.getElementById('current_project_id').value;
 
     try {
-        // 1. Project 처리 (없으면 생성, 있으면 패스)
+        // 1. Project 처리 (동일 프로젝트명이 있으면 재사용, 없으면 생성)
         if (!projectId) {
-            const { data: proj, error: projErr } = await supabase
+            // 먼저 동일한 이름의 프로젝트가 있는지 확인
+            const { data: existingProjects } = await supabase
                 .from('projects')
-                .insert([{ name: projectName }])
-                .select().single();
-            if (projErr) throw projErr;
-            projectId = proj.id;
+                .select('id, name')
+                .eq('name', projectName)
+                .limit(1);
+
+            if (existingProjects && existingProjects.length > 0) {
+                projectId = existingProjects[0].id;
+            } else {
+                const { data: newProj, error: projErr } = await supabase
+                    .from('projects')
+                    .insert([{ name: projectName }])
+                    .select().single();
+                if (projErr) throw projErr;
+                projectId = newProj.id;
+            }
             document.getElementById('current_project_id').value = projectId;
         } else {
-            // 이름이 변경되었을 수 있으므로 업데이트
             await supabase.from('projects').update({ name: projectName }).eq('id', projectId);
         }
 
         // 2. Form 처리
         const formData = {
             project_id: projectId,
-            package_no: document.getElementById('package_no').value,
-            item_name: document.getElementById('item_name').value,
+            package_no: document.getElementById('package_no').value.trim(),
+            item_name: document.getElementById('item_name').value.trim(),
             inspection_date: document.getElementById('inspection_date').value || null
         };
 
         if (!formId) {
-            // 새 폼 Insert
+            // 신규 작성 시 작성자 정보 추가
+            formData.created_by = user.id;
+            formData.author_email = user.email;
+
             const { data: form, error: formErr } = await supabase
                 .from('cross_check_forms')
                 .insert([formData])
@@ -311,7 +410,6 @@ async function saveFormData() {
         }
 
         // 3. Step & Checklists 처리
-        // 기존 로직을 덮어쓰기 위해 해당 form_id의 데이터 삭제 후 재생성 (간단한 Upsert 전략)
         await supabase.from('form_steps').delete().eq('form_id', formId);
         
         await saveStepData(1, formId, 'step1_doc_no', 'step1_doc_rev', null, 'res1', 'step1-list');
@@ -394,6 +492,34 @@ async function saveStepData(stepNum, formId, docNoId, docRevId, evidenceId, radi
 }
 
 // ---------------------------------------------------
+// 폼 데이터 삭제 (DELETE)
+// ---------------------------------------------------
+async function deleteCurrentForm() {
+    const formId = document.getElementById('current_form_id').value;
+    if (!formId) return;
+
+    if (!confirm('정말로 이 출하 확인서 문서를 삭제하시겠습니까?\n삭제된 데이터는 영구적으로 복구할 수 없습니다.')) {
+        return;
+    }
+
+    try {
+        const { error } = await supabase
+            .from('cross_check_forms')
+            .delete()
+            .eq('id', formId);
+
+        if (error) throw error;
+
+        alert('확인서가 성공적으로 삭제되었습니다.');
+        if (backToDashCallback) backToDashCallback();
+
+    } catch (err) {
+        console.error("문서 삭제 오류:", err);
+        alert("문서 삭제 중 오류가 발생했습니다: " + err.message);
+    }
+}
+
+// ---------------------------------------------------
 // 서명하기 (Sign-off) 핸들러
 // ---------------------------------------------------
 async function handleSignOff(btnId) {
@@ -404,7 +530,7 @@ async function handleSignOff(btnId) {
     }
     const formId = document.getElementById('current_form_id').value;
     if (!formId) {
-        alert("먼저 폼을 'DB 저장'한 뒤에 서명을 진행해 주세요.");
+        alert("먼저 폼을 '저장'한 뒤에 서명을 진행해 주세요.");
         return;
     }
 
@@ -416,7 +542,6 @@ async function handleSignOff(btnId) {
             const stepMap = { 'btn-sign1': 1, 'btn-sign2': 2, 'btn-sign3': 3 };
             const stepNum = stepMap[btnId];
             
-            // update form_steps
             await supabase.from('form_steps')
                 .update({ manager_sign_user_id: user.id })
                 .eq('form_id', formId)
@@ -427,6 +552,6 @@ async function handleSignOff(btnId) {
         alert("서명이 완료되었습니다.");
     } catch (err) {
         console.error("서명 오류:", err);
-        alert("서명 처리 중 오류가 발생했습니다.");
+        alert("서명 처리 중 오류가 발생했습니다: " + err.message);
     }
 }

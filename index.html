@@ -180,17 +180,26 @@
                     <input type="hidden" id="current_project_id" value="">
 
                     <!-- Controls -->
-                    <div class="absolute top-8 right-8 no-print flex gap-2">
-                        <button id="btn-save" class="px-5 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-2">
-                            <i class="fas fa-save"></i> DB 저장
+                    <div class="absolute top-8 right-8 no-print flex items-center gap-2">
+                        <span id="form-readonly-badge" class="hidden text-xs font-bold text-amber-700 bg-amber-100 border border-amber-200 px-3 py-1.5 rounded flex items-center gap-1">
+                            <i class="fas fa-lock"></i> 읽기 전용
+                        </span>
+                        <button id="btn-save" class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1.5">
+                            <i class="fas fa-save"></i> 저장
                         </button>
-                        <button onclick="window.print()" class="px-5 py-2 bg-slate-800 text-white rounded-md text-sm font-semibold hover:bg-slate-700 transition-colors shadow-sm flex items-center gap-2">
+                        <button id="btn-delete-form" class="hidden px-4 py-2 bg-red-600 text-white rounded-md text-sm font-semibold hover:bg-red-700 transition-colors shadow-sm flex items-center gap-1.5">
+                            <i class="fas fa-trash-alt"></i> 삭제
+                        </button>
+                        <button onclick="window.print()" class="px-4 py-2 bg-slate-800 text-white rounded-md text-sm font-semibold hover:bg-slate-700 transition-colors shadow-sm flex items-center gap-1.5">
                             <i class="fas fa-print"></i> PDF 인쇄
                         </button>
                     </div>
 
                     <div class="text-center mb-8 border-b-2 border-slate-800 pb-6 mt-12 md:mt-0">
-                        <p class="text-sm font-bold text-slate-500 mb-2 uppercase tracking-widest">[EMKO STANDARD FORM]</p>
+                        <div class="flex justify-between items-center mb-2">
+                            <p class="text-sm font-bold text-slate-500 uppercase tracking-widest">[EMKO STANDARD FORM]</p>
+                            <span id="form-author-info" class="text-xs text-slate-400 font-medium"></span>
+                        </div>
                         <h1 class="text-3xl font-black text-slate-900 mb-2 tracking-tight">출하 전 3-Way Cross Check 확인서</h1>
                         <p class="text-sm font-medium text-slate-600 uppercase tracking-widest">Pre-Shipment 3-Way Validation & Approval Sheet</p>
                     </div>
