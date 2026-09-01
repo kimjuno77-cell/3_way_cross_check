@@ -43,7 +43,7 @@ export function setupForm(backCb) {
         btnDelete.addEventListener('click', deleteCurrentForm);
     }
     
-    // 서명 버튼들
+    // 설명: 1~3단계 및 PM 서명 버튼 이벤트 리스너 등록
     const signBtns = ['btn-sign1', 'btn-sign2', 'btn-sign3', 'btn-sign-pm'];
     signBtns.forEach(id => {
         const btn = document.getElementById(id);
@@ -55,7 +55,7 @@ export function setupForm(backCb) {
         }
     });
 
-    // 항목 추가 이벤트 리스너
+    // 설명: 세부 체크리스트 항목 동적 추가 버튼 리스너
     document.querySelectorAll('.btn-add').forEach(btn => {
         btn.addEventListener('click', () => {
             const listId = btn.getAttribute('data-list');
@@ -75,7 +75,7 @@ export function setupForm(backCb) {
         });
     });
 
-    // 항목 삭제 및 서명 취소 (위임)
+    // 설명: 체크리스트 항목 삭제 및 서명 취소 이벤트 위임 처리
     const formView = document.getElementById('form-view');
     if (formView) {
         formView.addEventListener('click', async (e) => {
@@ -119,21 +119,30 @@ function renderChecklistItems(listId, items) {
     });
 }
 
-// 설명: 현재 로그인한 사용자가 해당 문서를 수정/삭제할 수 있는지 검사
+// 설명: 현재 로그인한 사용자가 해당 문서를 수정(편집)할 수 있는지 검사
+// [방안 2]: 1단계(설계), 2단계(구매), 3단계(물류) 작성자가 서로 다른 다자간 협업을 위해
+// 로그인한 인증 사용자라면 누구나 확인서를 수정하고 서명할 수 있도록 허용합니다.
 export function checkCanEdit(form) {
     if (!currentUserProfile) return false;
-    // 관리자(ADMIN)는 모든 문서 수정/삭제 가능
+    // 설명: 로그인한 모든 팀원은 문서를 열어 자신의 단계 내용을 기재하고 저장할 수 있습니다.
+    return true;
+}
+
+// 설명: 현재 로그인한 사용자가 해당 문서를 영구 삭제할 수 있는지 검사
+// [방안 2]: 데이터 무결성 및 실수 방지를 위해 삭제는 '관리자(ADMIN)' 또는 '최초 작성자(created_by)'만 가능하도록 안전하게 제한합니다.
+export function checkCanDelete(form) {
+    if (!currentUserProfile) return false;
+    // 관리자는 모든 문서 삭제 가능
     if (currentUserProfile.role === 'ADMIN') return true;
-    // 신규 작성 문서(ID 없음)는 누구나 작성 가능
-    if (!form || !form.id) return true;
-    // 오직 본인이 작성한 문서인 경우에만 수정 가능
+    // 신규 작성 폼은 삭제할 데이터베이스 행이 없음
+    if (!form || !form.id) return false;
+    // 최초 작성자 본인만 삭제 가능
     if (form.created_by && form.created_by === currentUserProfile.id) return true;
-    // 타인이 작성한 문서 및 작성자 미지정 문서는 일반 회원 수정 불가 (읽기 전용)
     return false;
 }
 
 // 설명: 읽기 전용 모드 또는 편집 모드로 폼 UI 전환
-function setFormReadOnlyMode(isReadOnly) {
+function setFormReadOnlyMode(isReadOnly, canDelete = false) {
     const readonlyBadge = document.getElementById('form-readonly-badge');
     const btnSave = document.getElementById('btn-save');
     const btnDelete = document.getElementById('btn-delete-form');
@@ -152,8 +161,12 @@ function setFormReadOnlyMode(isReadOnly) {
 
         const formId = document.getElementById('current_form_id').value;
         if (btnDelete) {
-            if (formId) btnDelete.classList.remove('hidden');
-            else btnDelete.classList.add('hidden');
+            // 설명: 문서가 이미 저장되어 있고, 삭제 권한(관리자 또는 최초 작성자)이 있는 경우에만 삭제 버튼 노출
+            if (formId && canDelete) {
+                btnDelete.classList.remove('hidden');
+            } else {
+                btnDelete.classList.add('hidden');
+            }
         }
 
         // 입력창 활성화
@@ -162,7 +175,7 @@ function setFormReadOnlyMode(isReadOnly) {
     }
 }
 
-// 빈 폼으로 초기화 (신규 작성)
+// 설명: 빈 폼으로 초기화 (신규 작성 시 호출)
 export function clearFormContent() {
     document.getElementById('current_form_id').value = '';
     document.getElementById('current_project_id').value = '';
@@ -206,10 +219,11 @@ export function clearFormContent() {
     resetSignUI('sign3-status', 'btn-sign3');
     resetSignUI('sign-pm-status', 'btn-sign-pm');
 
-    // 편집 모드로 설정
-    setFormReadOnlyMode(false);
+    // 편집 모드로 설정 (신규 폼은 아직 생성 전이므로 삭제 버튼은 숨김)
+    setFormReadOnlyMode(false, false);
 }
 
+// 설명: 서명 영역 UI를 기본 대기 상태로 초기화
 function resetSignUI(statusId, btnId) {
     const stEl = document.getElementById(statusId);
     const btEl = document.getElementById(btnId);
@@ -220,6 +234,7 @@ function resetSignUI(statusId, btnId) {
     if (btEl) btEl.classList.remove('hidden');
 }
 
+// 설명: 서명 완료 상태 UI 렌더링 및 서명 취소 버튼 노출 제어
 function setSignUI(statusId, btnId, isSigned, signerName = '', signedAt = null, signerUserId = null) {
     const stEl = document.getElementById(statusId);
     const btEl = document.getElementById(btnId);
@@ -227,7 +242,7 @@ function setSignUI(statusId, btnId, isSigned, signerName = '', signedAt = null, 
         const dateStr = signedAt ? new Date(signedAt).toLocaleDateString() : '';
         const nameText = signerName ? signerName : '서명 완료';
 
-        // 서명 취소 권한 검증: 관리자(ADMIN)이거나 실제 서명한 사용자 본인
+        // 설명: 서명 취소 권한 검증: 관리자(ADMIN)이거나 실제 서명한 사용자 본인
         const isSigner = currentUserProfile && signerUserId && (signerUserId === currentUserProfile.id);
         const isAdmin = currentUserProfile && (currentUserProfile.role === 'ADMIN');
         const canCancel = isAdmin || isSigner;
@@ -280,17 +295,18 @@ export async function loadFormContent(formId) {
         document.getElementById('item_name').value = form.item_name || '';
         document.getElementById('inspection_date').value = form.inspection_date || '';
 
-        // 작성자 정보 표시
+        // 설명: 최초 작성자 정보 표시
         const authorInfoEl = document.getElementById('form-author-info');
         if (authorInfoEl) {
             const authorName = form.author_email || '미지정';
             const createdDate = new Date(form.created_at).toLocaleDateString();
-            authorInfoEl.innerHTML = `<i class="fas fa-user-edit mr-1"></i>작성자: <span class="text-slate-600 font-semibold">${authorName}</span> (${createdDate})`;
+            authorInfoEl.innerHTML = `<i class="fas fa-user-edit mr-1"></i>최초 작성자: <span class="text-slate-600 font-semibold">${authorName}</span> (${createdDate})`;
         }
 
-        // 서명 데이터 바인딩 (서명 취소 권한 확인을 위해 서명자 User ID 전달)
+        // 설명: PM 최종 서명 데이터 바인딩
         setSignUI('sign-pm-status', 'btn-sign-pm', !!form.pm_sign_user_id, form.pm_signer_name, form.pm_signed_at, form.pm_sign_user_id);
 
+        // 설명: 1~3단계 상세 데이터 및 서명 바인딩
         if (form.form_steps) {
             form.form_steps.forEach(step => {
                 const sNum = step.step_number;
@@ -307,13 +323,13 @@ export async function loadFormContent(formId) {
                     document.getElementById('step3_evidence').checked = step.evidence_secured;
                 }
 
-                // 결과 바인딩
+                // 결과 라디오 버튼 바인딩
                 if (step.result_status && step.result_status !== 'PENDING') {
                     const radio = document.querySelector(`input[name="res${sNum}"][value="${step.result_status}"]`);
                     if (radio) radio.checked = true;
                 }
 
-                // 서명 바인딩 (서명자 성명, 일시 및 작성자 User ID 전달)
+                // 각 단계 서명 바인딩
                 setSignUI(`sign${sNum}-status`, `btn-sign${sNum}`, !!step.manager_sign_user_id, step.manager_signer_name, step.manager_signed_at, step.manager_sign_user_id);
 
                 // 체크리스트 바인딩
@@ -338,6 +354,7 @@ export async function loadFormContent(formId) {
             });
         }
 
+        // 설명: 증빙 항목 바인딩
         if (form.form_evidences) {
             form.form_evidences.forEach(ev => {
                 if (ev.is_other) {
@@ -352,9 +369,10 @@ export async function loadFormContent(formId) {
             });
         }
 
-        // 권한 검사: 관리자이거나 본인 작성글이 아니면 읽기 전용
+        // 설명: 권한 검사 - 수정 권한은 모든 팀원에게 허용, 삭제 권한은 관리자 또는 최초 작성자에게만 허용
         const canEdit = checkCanEdit(form);
-        setFormReadOnlyMode(!canEdit);
+        const canDelete = checkCanDelete(form);
+        setFormReadOnlyMode(!canEdit, canDelete);
 
     } catch (err) {
         console.error("데이터 로드 오류:", err);
@@ -382,9 +400,8 @@ async function saveFormData() {
     let projectId = document.getElementById('current_project_id').value;
 
     try {
-        // 1. Project 처리 (동일 프로젝트명이 있으면 재사용, 없으면 생성)
+        // 1. Project 처리 (동일 프로젝트명이 있으면 재사용, 없으면 신규 생성)
         if (!projectId) {
-            // 먼저 동일한 이름의 프로젝트가 있는지 확인
             const { data: existingProjects } = await supabase
                 .from('projects')
                 .select('id, name')
@@ -417,7 +434,7 @@ async function saveFormData() {
                 .eq('project_id', projectId)
                 .eq('package_no', packageNo);
 
-            // 기존 문서를 수정하는 경우 자기 자신(현재 formId)은 중복 검사에서 제외
+            // 설명: 기존 문서를 수정하는 경우 자기 자신(현재 formId)은 중복 검사에서 제외
             if (formId) {
                 dupQuery = dupQuery.neq('id', formId);
             }
@@ -437,7 +454,7 @@ async function saveFormData() {
             }
         }
 
-        // 3. Form 처리
+        // 3. Form 처리 (신규 작성 시에만 최초 작성자 created_by 등록)
         const formData = {
             project_id: projectId,
             package_no: packageNo,
@@ -446,7 +463,7 @@ async function saveFormData() {
         };
 
         if (!formId) {
-            // 신규 작성 시 작성자 정보 추가
+            // 설명: 최초 신규 작성 시에만 작성자 정보 저장
             formData.created_by = user.id;
             formData.author_email = user.email;
 
@@ -458,7 +475,7 @@ async function saveFormData() {
             formId = form.id;
             document.getElementById('current_form_id').value = formId;
         } else {
-            // 기존 폼 Update
+            // 설명: 기존 확인서 수정 시에는 created_by를 변경하지 않고 공통 정보만 UPDATE
             const { error: formErr } = await supabase
                 .from('cross_check_forms')
                 .update(formData)
@@ -466,12 +483,12 @@ async function saveFormData() {
             if (formErr) throw formErr;
         }
 
-        // 3. Step & Checklists 처리 (기존 서명 정보를 안전하게 보존하며 필드 및 체크리스트 갱신)
+        // 4. Step & Checklists 처리 (기존 서명 정보를 안전하게 보존하며 필드 및 체크리스트 갱신)
         await saveStepData(1, formId, 'step1_doc_no', 'step1_doc_rev', null, 'res1', 'step1-list');
         await saveStepData(2, formId, 'step2_doc_no', null, 'step2_evidence', 'res2', 'step2-list');
         await saveStepData(3, formId, 'step3_doc_no', null, 'step3_evidence', 'res3', 'step3-list');
 
-        // 4. Form Evidences 처리
+        // 5. Form Evidences 처리
         await supabase.from('form_evidences').delete().eq('form_id', formId);
         
         const evidenceElements = document.querySelectorAll('.ev-chk');
@@ -505,6 +522,7 @@ async function saveFormData() {
     }
 }
 
+// 설명: 단계별(1, 2, 3단계) 검증 데이터 및 체크리스트를 안전하게 저장
 async function saveStepData(stepNum, formId, docNoId, docRevId, evidenceId, radioName, listId) {
     const docNo = document.getElementById(docNoId)?.value || null;
     const docRev = docRevId ? (document.getElementById(docRevId)?.value || null) : null;
@@ -585,7 +603,7 @@ async function deleteCurrentForm() {
     const formId = document.getElementById('current_form_id').value;
     if (!formId) return;
 
-    // 현재 문서의 작성자 정보 조회하여 삭제 권한 검증
+    // 설명: 삭제 전 현재 문서의 최초 작성자 정보를 확인하여 권한 검증
     try {
         const { data: form, error: fetchErr } = await supabase
             .from('cross_check_forms')
@@ -599,7 +617,7 @@ async function deleteCurrentForm() {
         const isAdmin = currentUserProfile && (currentUserProfile.role === 'ADMIN');
 
         if (!isAdmin && !isAuthor) {
-            alert('삭제 권한이 없습니다.\n관리자(ADMIN) 또는 본인이 직접 작성한 확인서만 삭제할 수 있습니다.');
+            alert('삭제 권한이 없습니다.\n확인서 삭제는 관리자(ADMIN) 또는 최초 작성자 본인만 가능합니다.');
             return;
         }
     } catch (err) {
@@ -642,7 +660,7 @@ async function handleSignOff(btnId) {
         return;
     }
 
-    // 단계별 명칭 안내
+    // 설명: 단계별 명칭 안내
     const stepTitleMap = {
         'btn-sign1': '1단계 (설계 담당자)',
         'btn-sign2': '2단계 (구매 담당자)',
@@ -651,14 +669,14 @@ async function handleSignOff(btnId) {
     };
     const stepTitle = stepTitleMap[btnId] || '서명';
 
-    // 서명할 이름 또는 이니셜 입력 받기
+    // 설명: 서명할 이름 또는 이니셜 입력 받기
     const defaultSignerName = (currentUserProfile && currentUserProfile.email) 
         ? currentUserProfile.email.split('@')[0] 
         : '';
     const signerInput = prompt(`[${stepTitle}] 서명을 진행합니다.\n서명란에 기재할 성명 또는 이니셜을 입력하세요:`, defaultSignerName);
 
     if (signerInput === null) {
-        // 취소 누름
+        // 사용자가 취소를 누른 경우 중단
         return;
     }
 
@@ -717,7 +735,7 @@ async function handleCancelSign(btnId, statusId) {
     };
     const stepTitle = stepTitleMap[btnId] || '서명';
 
-    // 서명 취소 권한 사전 검증
+    // 설명: 서명 취소 권한 사전 검증
     try {
         let signUserId = null;
         if (btnId === 'btn-sign-pm') {

@@ -8,13 +8,14 @@ const btnToggleAll = document.getElementById('btn-toggle-all-groups');
 let allForms = [];
 let isAllCollapsed = false;
 
+// 설명: 대시보드 화면 이벤트 및 콜백 초기화
 export function setupDashboard(showFormViewCb) {
     onNewFormCallback = showFormViewCb;
 
     const btnNewForm = document.getElementById('btn-new-form');
     if (btnNewForm) {
         btnNewForm.addEventListener('click', () => {
-            if (onNewFormCallback) onNewFormCallback(null); // 신규 작성 (ID 없음)
+            if (onNewFormCallback) onNewFormCallback(null); // 설명: 신규 작성 (ID 없음)
         });
     }
 
@@ -117,7 +118,7 @@ function renderGroupedList(searchQuery = '') {
         return;
     }
 
-    // 프로젝트명 기준으로 그룹화 (Map 생성)
+    // 설명: 프로젝트명 기준으로 그룹화 (Map 생성)
     const groupedMap = new Map();
     filtered.forEach(form => {
         const projectName = form.projects?.name || '미지정 프로젝트';
@@ -127,7 +128,7 @@ function renderGroupedList(searchQuery = '') {
         groupedMap.get(projectName).push(form);
     });
 
-    // 프로젝트 그룹별로 UI 카드 생성
+    // 설명: 프로젝트 그룹별로 UI 카드 생성
     groupedMap.forEach((forms, projectName) => {
         const groupCard = document.createElement('div');
         groupCard.className = 'col-span-full bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden mb-3 transition-shadow hover:shadow-md';
@@ -135,7 +136,7 @@ function renderGroupedList(searchQuery = '') {
         const totalCount = forms.length;
         const signedCount = forms.filter(f => !!f.pm_sign_user_id).length;
 
-        // 프로젝트 헤더 (클릭 시 접기/펼치기)
+        // 설명: 프로젝트 헤더 (클릭 시 접기/펼치기)
         const headerEl = document.createElement('div');
         headerEl.className = 'bg-slate-50/90 hover:bg-slate-100/90 border-b border-slate-200 px-6 py-4 flex flex-wrap justify-between items-center gap-3 cursor-pointer select-none transition-colors';
         headerEl.innerHTML = `
@@ -163,7 +164,7 @@ function renderGroupedList(searchQuery = '') {
             </div>
         `;
 
-        // 확인서 리스트 테이블 컨테이너
+        // 설명: 확인서 리스트 테이블 컨테이너
         const tableContainer = document.createElement('div');
         tableContainer.className = 'project-group-table-container overflow-x-auto transition-all duration-200';
 
@@ -175,7 +176,7 @@ function renderGroupedList(searchQuery = '') {
                     <th class="py-3 px-6">Package No.</th>
                     <th class="py-3 px-6">품목명 (Item)</th>
                     <th class="py-3 px-6">검사/출하일</th>
-                    <th class="py-3 px-6">작성자</th>
+                    <th class="py-3 px-6">최초 작성자</th>
                     <th class="py-3 px-6 text-center">승인 상태</th>
                     <th class="py-3 px-6 text-center">관리</th>
                 </tr>
@@ -193,10 +194,14 @@ function renderGroupedList(searchQuery = '') {
             const dateStr = form.inspection_date ? form.inspection_date : '<span class="text-slate-400">미지정</span>';
             const authorStr = form.author_email ? form.author_email.split('@')[0] : '미지정';
             
-            // 엄격한 권한 체크: 관리자(ADMIN)이거나 실제 작성자(created_by) 본인인 경우만 수정/삭제 허용
+            // 설명: [방안 2] 권한 분리 적용
+            // 1) 수정 권한: 로그인한 모든 팀원에게 허용 (다자간 1, 2, 3단계 릴레이 협업 지원)
+            const canEdit = !!currentUserProfile;
+
+            // 2) 삭제 권한: 관리자(ADMIN) 또는 최초 작성자(created_by) 본인에게만 안전하게 허용
             const isAuthor = currentUserProfile && form.created_by && (form.created_by === currentUserProfile.id);
             const isAdmin = currentUserProfile && (currentUserProfile.role === 'ADMIN');
-            const canManage = isAdmin || isAuthor;
+            const canDelete = isAdmin || isAuthor;
 
             tr.innerHTML = `
                 <td class="py-3.5 px-6 font-bold text-blue-700">
@@ -214,11 +219,11 @@ function renderGroupedList(searchQuery = '') {
                 </td>
                 <td class="py-3.5 px-6 text-center">
                     <div class="flex items-center justify-center gap-2">
-                        <button class="btn-open-form px-3 py-1 bg-white border border-slate-300 text-slate-700 rounded text-xs font-semibold hover:bg-slate-50 hover:border-blue-400 hover:text-blue-600 transition shadow-sm" title="${canManage ? '수정 및 열람' : '조회 전용'}">
-                            <i class="fas ${canManage ? 'fa-edit' : 'fa-eye'} mr-1"></i>${canManage ? '수정/열람' : '조회'}
+                        <button class="btn-open-form px-3 py-1 bg-white border border-slate-300 text-slate-700 rounded text-xs font-semibold hover:bg-slate-50 hover:border-blue-400 hover:text-blue-600 transition shadow-sm" title="${canEdit ? '수정 및 열람' : '조회 전용'}">
+                            <i class="fas ${canEdit ? 'fa-edit' : 'fa-eye'} mr-1"></i>${canEdit ? '수정/열람' : '조회'}
                         </button>
-                        ${canManage ? `
-                            <button class="btn-delete-row px-2.5 py-1 text-red-500 hover:bg-red-50 hover:text-red-700 rounded text-xs font-semibold transition" title="확인서 삭제">
+                        ${canDelete ? `
+                            <button class="btn-delete-row px-2.5 py-1 text-red-500 hover:bg-red-50 hover:text-red-700 rounded text-xs font-semibold transition" title="확인서 삭제 (최초 작성자/관리자 전용)">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         ` : ''}
@@ -226,7 +231,7 @@ function renderGroupedList(searchQuery = '') {
                 </td>
             `;
 
-            // 조회/수정 버튼 클릭 이벤트
+            // 설명: 조회/수정 버튼 클릭 이벤트
             const btnOpen = tr.querySelector('.btn-open-form');
             if (btnOpen) {
                 btnOpen.addEventListener('click', (e) => {
@@ -235,12 +240,12 @@ function renderGroupedList(searchQuery = '') {
                 });
             }
 
-            // 행 자체 클릭 시에도 오픈
+            // 설명: 테이블 행 자체 클릭 시에도 폼 오픈
             tr.addEventListener('click', () => {
                 if (onNewFormCallback) onNewFormCallback(form.id);
             });
 
-            // 삭제 버튼 클릭 이벤트
+            // 설명: 삭제 버튼 클릭 이벤트 (삭제 권한 보유자에게만 렌더링됨)
             const btnDel = tr.querySelector('.btn-delete-row');
             if (btnDel) {
                 btnDel.addEventListener('click', async (e) => {
@@ -254,7 +259,7 @@ function renderGroupedList(searchQuery = '') {
 
         tableContainer.appendChild(tableEl);
 
-        // 헤더 클릭 시 개별 아코디언 토글 (접기/펼치기)
+        // 설명: 헤더 클릭 시 개별 아코디언 토글 (접기/펼치기)
         const chevronIcon = headerEl.querySelector('.project-group-chevron');
         headerEl.addEventListener('click', () => {
             const isHidden = tableContainer.classList.toggle('hidden');
@@ -269,14 +274,14 @@ function renderGroupedList(searchQuery = '') {
     });
 }
 
-// 설명: 대시보드 목록에서 즉시 삭제 처리
+// 설명: 대시보드 목록에서 확인서 영구 삭제 처리 (최초 작성자 또는 관리자 전용)
 async function deleteFormFromDashboard(formId, itemName) {
     const targetForm = allForms.find(f => f.id === formId);
     const isAuthor = currentUserProfile && targetForm && targetForm.created_by && (targetForm.created_by === currentUserProfile.id);
     const isAdmin = currentUserProfile && (currentUserProfile.role === 'ADMIN');
 
     if (!isAdmin && !isAuthor) {
-        alert('삭제 권한이 없습니다.\n관리자(ADMIN) 또는 본인이 작성한 확인서만 삭제할 수 있습니다.');
+        alert('삭제 권한이 없습니다.\n확인서 삭제는 관리자(ADMIN) 또는 최초 작성자 본인만 가능합니다.');
         return;
     }
 
